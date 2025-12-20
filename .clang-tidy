@@ -1,0 +1,3 @@
+Checks: 'readability-*,portability-*,modernize-*,bugprone-*,performance-*,clang-analyzer-*,hicpp-*,cppcoreguidelines-*,misc-*,-misc-non-private-member-variables-in-classes,-cppcoreguidelines-avoid-magic-numbers, -cppcoreguidelines-special-member-functions, -cppcoreguidelines-narrowing-conversions'
+HeaderFilterRegex: '.*'
+ExcludeHeaderFilterRegex: '.*(iostream|bits/.*|__float128).*'
