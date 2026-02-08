@@ -1,0 +1,247 @@
+{
+    "version": 6,
+    "configurePresets": [
+	{
+	    "name": "debug-clang",
+	    "displayName": "Debug configuration (Clang libc++)",
+	    "generator": "Ninja",
+	    "binaryDir": "build/debug/clang",
+	    "cacheVariables": {
+		"CMAKE_BUILD_TYPE": "Debug",
+		"CMAKE_CXX_COMPILER": "clang++",
+		"CMAKE_CXX_FLAGS_INIT": "-stdlib=libc++"
+	    }
+	},
+	{
+	    "name": "release-clang",
+	    "displayName": "Release configuration (Clang libc++)",
+	    "generator": "Ninja",
+	    "binaryDir": "build/release/clang",
+	    "cacheVariables": {
+		"CMAKE_BUILD_TYPE": "Release",
+		"CMAKE_CXX_COMPILER": "clang++",
+		"CMAKE_CXX_FLAGS_INIT": "-stdlib=libc++"
+	    }
+	},
+	{
+	    "name": "debug-gcc",
+	    "displayName": "Debug configuration (GCC libstdc++)",
+	    "generator": "Ninja",
+	    "binaryDir": "build/debug/gcc",
+	    "cacheVariables": {
+		"CMAKE_BUILD_TYPE": "Debug",
+		"CMAKE_CXX_COMPILER": "g++"
+	    }
+	},
+	{
+	    "name": "release-gcc",
+	    "displayName": "Release configuration (GCC libstdc++)",
+	    "generator": "Ninja",
+	    "binaryDir": "build/release/gcc",
+	    "cacheVariables": {
+		"CMAKE_BUILD_TYPE": "Release",
+		"CMAKE_CXX_COMPILER": "g++"
+	    }
+	},
+	{
+	    "name": "debug-msvc",
+	    "displayName": "Debug configuration (MSVC)",
+	    "generator": "Ninja",
+	    "binaryDir": "build/debug/msvc",
+	    "cacheVariables": {
+		"CMAKE_BUILD_TYPE": "Debug",
+		"CMAKE_CXX_COMPILER": "cl"
+	    }
+	},
+	{
+	    "name": "release-msvc",
+	    "displayName": "Release configuration (MSVC)",
+	    "generator": "Ninja",
+	    "binaryDir": "build/release/msvc",
+	    "cacheVariables": {
+		"CMAKE_BUILD_TYPE": "Release",
+		"CMAKE_CXX_COMPILER": "cl"
+	    }
+	},
+	{
+	    "name": "coverage",
+	    "displayName": "Coverage configuration",
+	    "generator": "Ninja",
+	    "binaryDir": "build/coverage",
+	    "cacheVariables": {
+		"CMAKE_BUILD_TYPE": "Debug",
+		"CMAKE_CXX_FLAGS_INIT": "--coverage -fno-inline -fno-inline-small-functions -fno-default-inline -fno-elide-constructors",
+		"CMAKE_CXX_COMPILER": "g++",
+		"CMAKE_EXE_LINKER_FLAGS": "--coverage"
+	    }
+	}
+    ],
+    "buildPresets": [
+	{
+	    "name": "debug-clang",
+	    "displayName": "Debug build (Clang libc++)",
+	    "configurePreset": "debug-clang",   
+	    "jobs": 8
+	},
+	{
+	    "name": "release-clang",
+	    "displayName": "Release build (Clang libc++)",
+	    "configurePreset": "release-clang",
+	    "jobs": 8
+	},
+	{
+	    "name": "debug-gcc",
+	    "displayName": "Debug build (GCC libstdc++)",
+	    "configurePreset": "debug-gcc",   
+	    "jobs": 8
+	},
+	{
+	    "name": "release-gcc",
+	    "displayName": "Release build (GCC libstdc++)",
+	    "configurePreset": "release-gcc",
+	    "jobs": 8
+	},
+	{
+	    "name": "debug-msvc",
+	    "displayName": "Debug build (MSVC)",
+	    "configurePreset": "debug-msvc",
+	    "jobs": 8
+	},
+	{
+	    "name": "release-msvc",
+	    "displayName": "Release build (MSVC)",
+	    "configurePreset": "release-msvc",
+	    "jobs": 8
+	},
+	{
+	    "name": "coverage",
+	    "displayName": "Coverage build",
+	    "configurePreset": "coverage",
+	    "jobs": 8
+	}
+    ],
+    "testPresets": [
+	{
+	    "name": "debug-clang",
+	    "displayName": "Debug test (Clang libc++)",
+	    "configurePreset": "debug-clang",
+	    "output": {
+		"outputOnFailure": true
+	    }
+	},
+	{
+	    "name": "release-clang",
+	    "displayName": "Release test (Clang libc++)",
+	    "configurePreset": "release-clang",
+	    "output": {
+		"outputOnFailure": true
+	    }
+	},
+	{
+	    "name": "debug-gcc",
+	    "displayName": "Debug test (GCC libstdc++)",
+	    "configurePreset": "debug-gcc",
+	    "output": {
+		"outputOnFailure": true
+	    }
+	},
+	{
+	    "name": "release-gcc",
+	    "displayName": "Release test (GCC libstdc++)",
+	    "configurePreset": "release-gcc",
+	    "output": {
+		"outputOnFailure": true
+	    }
+	},
+	{
+	    "name": "debug-msvc",
+	    "displayName": "Debug test (MSVC)",
+	    "configurePreset": "debug-msvc",
+	    "output": {
+		"outputOnFailure": true
+	    }
+	},
+	{
+	    "name": "release-msvc",
+	    "displayName": "Release test (MSVC)",
+	    "configurePreset": "release-msvc",
+	    "output": {
+		"outputOnFailure": true
+	    }
+	},
+	{
+	    "name": "coverage",
+	    "displayName": "Coverage test",
+	    "configurePreset": "coverage",
+	    "output": {
+		"outputOnFailure": true
+	    }
+	}
+    ],
+    "workflowPresets": [
+	{
+	    "name": "debug-clang",
+	    "displayName": "Debug workflow (Clang libc++)",
+	    "steps": [
+		{ "type": "configure", "name": "debug-clang" },
+		{ "type": "build", "name": "debug-clang" },
+		{ "type": "test", "name": "debug-clang" }
+	    ]
+	},
+	{
+	    "name": "release-clang",
+	    "displayName": "Release workflow (Clang libc++)",
+	    "steps": [
+		{ "type": "configure", "name": "release-clang" },
+		{ "type": "build", "name": "release-clang" },
+		{ "type": "test", "name": "release-clang" }
+	    ]
+	},
+	{
+	    "name": "debug-gcc",
+	    "displayName": "Debug workflow (GCC libstdc++)",
+	    "steps": [
+		{ "type": "configure", "name": "debug-gcc" },
+		{ "type": "build", "name": "debug-gcc" },
+		{ "type": "test", "name": "debug-gcc" }
+	    ]
+	},
+	{
+	    "name": "release-gcc",
+	    "displayName": "Release workflow (GCC libstdc++)",
+	    "steps": [
+		{ "type": "configure", "name": "release-gcc" },
+		{ "type": "build", "name": "release-gcc" },
+		{ "type": "test", "name": "release-gcc" }
+	    ]
+	},
+	{
+	    "name": "debug-msvc",
+	    "displayName": "Debug workflow (MSVC)",
+	    "steps": [
+		{ "type": "configure", "name": "debug-msvc" },
+		{ "type": "build", "name": "debug-msvc" },
+		{ "type": "test", "name": "debug-msvc" }
+	    ]
+	},
+	{
+	    "name": "release-msvc",
+	    "displayName": "Release workflow (MSVC)",
+	    "steps": [
+		{ "type": "configure", "name": "release-msvc" },
+		{ "type": "build", "name": "release-msvc" },
+		{ "type": "test", "name": "release-msvc" }
+	    ]
+	},
+	{
+	    "name": "coverage",
+	    "displayName": "Coverage workflow",
+	    "steps": [
+		{ "type": "configure", "name": "coverage" },
+		{ "type": "build", "name": "coverage" },
+		{ "type": "test", "name": "coverage" }
+	    ]
+	}
+    ]
+}
+

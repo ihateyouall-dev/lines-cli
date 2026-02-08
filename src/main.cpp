@@ -1,6 +1,7 @@
-#include <latercli.hpp>
+#include <cli/root.hpp>
 
 auto main(int argc, char **argv) -> int {
-    Later::CLIApplication app(argc, argv);
-    return app.exec();
+    Root root;
+    CLI11_PARSE(root, argc, argv);
+    return 0;
 }
