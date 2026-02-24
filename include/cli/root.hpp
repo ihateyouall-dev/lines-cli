@@ -1,8 +1,9 @@
 #include <CLI/CLI.hpp>
 #include <cli/tasks/tasks.hpp>
-#include <lines/version.h>
 
 class Root : public CLI::App {
+    Tasks _tasks;
+
   public:
     Root();
 };

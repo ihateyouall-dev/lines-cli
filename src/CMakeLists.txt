@@ -9,7 +9,7 @@ FetchContent_Declare(
 FetchContent_Declare(
   Lines
   GIT_REPOSITORY https://github.com/ihateyouall-dev/lines-core
-  GIT_TAG v1.0
+  GIT_TAG main
 )
 
 FetchContent_Declare(
@@ -24,15 +24,19 @@ FetchContent_MakeAvailable(nlohmann_json)
 
 add_library(cli_root)
 add_library(tasks_json_storage)
+add_library(cli_tasks)
 
 target_sources(cli_root PRIVATE cli/root.cpp)
+target_sources(cli_tasks PRIVATE cli/tasks/tasks.cpp cli/tasks/filter.cpp)
 target_sources(tasks_json_storage PRIVATE storages/tasks/json.cpp)
 
 target_include_directories(cli_root PUBLIC ${PROJECT_SOURCE_DIR}/include)
+target_include_directories(cli_tasks PUBLIC ${PROJECT_SOURCE_DIR}/include)
 target_include_directories(tasks_json_storage PUBLIC ${PROJECT_SOURCE_DIR}/include)
 
-target_link_libraries(cli_root PUBLIC CLI11 Lines::Lines)
+target_link_libraries(cli_tasks PUBLIC CLI11 Lines::Tasks tasks_json_storage)
+target_link_libraries(cli_root PUBLIC CLI11 Lines::Lines cli_tasks)
 target_link_libraries(tasks_json_storage PUBLIC nlohmann_json::nlohmann_json Lines::Tasks)
 
 add_library(Lines::CLI::Root ALIAS cli_root)
-add_library(Lines::Storages::Tasks::Json ALIAS cli_root)
+add_library(Lines::Storages::Tasks::Json ALIAS tasks_json_storage)
