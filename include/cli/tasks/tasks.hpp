@@ -15,9 +15,12 @@ class Tasks { // NOLINT
     } _changed_task_info;
     Lines::TasksJSONStorage _storage{"lines_tasks.json"};
     bool _dirty = false;
+    bool _force = false;
     Lines::TasksFilterRule _tasks_filter_rule;
 
     auto require_task(std::size_t index) -> Lines::Task *;
+
+    void add_filter_options(CLI::App &app, const std::string_view &desc_prefix);
 
     void showing_init(CLI::App &app);
     void editing_init(CLI::App &app);

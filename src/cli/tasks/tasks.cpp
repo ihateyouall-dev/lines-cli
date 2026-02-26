@@ -1,6 +1,7 @@
 #include <CLI/CLI.hpp>
 #include <cctype>
 #include <cli/tasks/tasks.hpp>
+#include <cstddef>
 #include <format>
 #include <stdexcept>
 #include <string>
@@ -65,12 +66,7 @@ auto Tasks::require_task(std::size_t index) -> Lines::Task * {
 void Tasks::showing_init(CLI::App &app) {
     auto *show = app.add_subcommand("show", "Show information about tasks");
 
-    show->add_option("-i,--id", _tasks_filter_rule.id,
-                     "Show full information about task with given id");
-    show->add_option("--any-tag", _tasks_filter_rule.any_tag,
-                     "Show only tasks that have at least one of given tags");
-    show->add_option("--all-tags", _tasks_filter_rule.all_tags,
-                     "Show only tasks that have all of given tags");
+    add_filter_options(*show, "Show");
 
     show->callback([this] {
         auto tasks = filter(_storage, _tasks_filter_rule);
@@ -138,23 +134,37 @@ void Tasks::editing_init(CLI::App &app) {
 
 void Tasks::deletion_init(CLI::App &app) {
     auto *delete_app = app.add_subcommand("delete", "Delete tasks");
-    delete_app->add_option("-i,--id", _tasks_filter_rule.id, "Delete task with given number")
-        ->required();
+
+    add_filter_options(*delete_app, "Delete");
+
+    delete_app->add_flag("-f,--force", _force, "Force deletion");
 
     delete_app->callback([this] {
-        auto *task = require_task(*_tasks_filter_rule.id);
-        if (!task) {
+        auto tasks = filter(_storage, _tasks_filter_rule);
+        if (tasks.empty()) {
+            std::cerr << "ERROR: Task not found\n";
             return;
         }
-
-        std::cout << "Deleted task:\n" << task_to_string_unfolded(*task);
-
-        bool confirmed = confirm();
-        if (!confirmed) {
-            return;
+        if (tasks.size() == 1) {
+            std::cout << std::format("Deleted task:\nID: {}\n{}\n", tasks[0].id,
+                                     task_to_string_unfolded(*tasks[0].task));
+        } else {
+            std::cout << "Deleted tasks:\n";
+            for (const auto &task : tasks) {
+                std::cout << std::format("{}. {}\n", task.id, task_to_string(*task.task));
+            }
         }
 
-        _storage.erase(static_cast<std::ptrdiff_t>(*_tasks_filter_rule.id));
+        if (!_force) {
+            bool confirmed = confirm();
+            if (!confirmed) {
+                return;
+            }
+        }
+
+        for (const auto &task : std::ranges::reverse_view(tasks)) {
+            _storage.erase(static_cast<std::ptrdiff_t>(task.id));
+        }
         _dirty = true;
     });
 }
@@ -163,35 +173,51 @@ void Tasks::completion_init(CLI::App &app) {
     auto *complete = app.add_subcommand("complete", "Complete the task");
     auto *uncomplete = app.add_subcommand("uncomplete", "Uncomplete the task");
 
-    complete->add_option("-i,--id", _tasks_filter_rule.id, "Complete task with given number")
-        ->required();
-    uncomplete->add_option("-i,--id", _tasks_filter_rule.id, "Uncomplete task with given number")
-        ->required();
+    add_filter_options(*complete, "Complete");
+    add_filter_options(*uncomplete, "Uncomplete");
 
     complete->callback([this] {
-        auto *task = require_task(*_tasks_filter_rule.id);
-        if (!task) {
+        auto tasks = filter(_storage, _tasks_filter_rule);
+        if (tasks.empty()) {
+            std::cerr << "ERROR: Task not found\n";
             return;
         }
-        if (task->completion().completed()) {
-            std::cerr << "ERROR: Task already completed\n";
-            return;
+        if (tasks.size() == 1) {
+            auto task = tasks[0];
+            if (task.task->completion().completed()) {
+                std::cerr << "ERROR: Task already completed\n";
+                return;
+            }
+            task.task->completion().complete();
+            std::cout << std::format("ID: {}\n{}\n", task.id, task_to_string_unfolded(*task.task));
+        } else {
+            for (const auto &task : tasks) {
+                task.task->completion().complete();
+                std::cout << std::format("{}. {}\n", task.id, task_to_string(*task.task));
+            }
         }
-        task->completion().complete();
-        std::cout << task_to_string(*task) << '\n';
         _dirty = true;
     });
     uncomplete->callback([this] {
-        auto *task = require_task(*_tasks_filter_rule.id);
-        if (!task) {
+        auto tasks = filter(_storage, _tasks_filter_rule);
+        if (tasks.empty()) {
+            std::cerr << "ERROR: Task not found\n";
             return;
         }
-        if (!task->completion().completed()) {
-            std::cerr << "ERROR: Task not completed\n";
-            return;
+        if (tasks.size() == 1) {
+            auto task = tasks[0];
+            if (!task.task->completion().completed()) {
+                std::cerr << "ERROR: Task not completed\n";
+                return;
+            }
+            task.task->completion().reset();
+            std::cout << std::format("ID: {}\n{}\n", task.id, task_to_string_unfolded(*task.task));
+        } else {
+            for (const auto &task : tasks) {
+                task.task->completion().reset();
+                std::cout << std::format("{}. {}\n", task.id, task_to_string(*task.task));
+            }
         }
-        task->completion().reset();
-        std::cout << task_to_string(*task) << '\n';
         _dirty = true;
     });
 }
@@ -211,3 +237,14 @@ void Tasks::save() {
 }
 
 auto Tasks::dirty() const -> bool { return _dirty; };
+
+void Tasks::add_filter_options(CLI::App &app, const std::string_view &desc_prefix) {
+    auto *filters = app.add_option_group("filters");
+    filters->add_option("-i,--id", _tasks_filter_rule.id,
+                        std::format("{} task with given id", desc_prefix));
+    filters->add_option(
+        "-T,--any-tag", _tasks_filter_rule.any_tag,
+        std::format("{} only tasks that have at least one of given tags", desc_prefix));
+    filters->add_option("-A,--all-tags", _tasks_filter_rule.all_tags,
+                        std::format("{} only tasks that have all of given tags", desc_prefix));
+}
