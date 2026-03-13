@@ -17,14 +17,15 @@ auto Lines::filter(Lines::TasksJSONStorage &storage, const TasksFilterRule &rule
         return result;
     }
 
-    auto pred = [&rule](const Task &task) {
+    auto pred = [&rule](const Task &task) -> bool {
         bool contains_all_tags =
-            !rule.all_tags || std::ranges::all_of(*rule.all_tags, [&](const auto &tag) {
+            !rule.all_tags || std::ranges::all_of(*rule.all_tags, [&](const auto &tag) -> auto {
                 return has_tag(task, tag);
             });
         bool contains_any_tag =
-            !rule.any_tag ||
-            std::ranges::any_of(*rule.any_tag, [&](const auto &tag) { return has_tag(task, tag); });
+            !rule.any_tag || std::ranges::any_of(*rule.any_tag, [&](const auto &tag) -> auto {
+                return has_tag(task, tag);
+            });
         return contains_all_tags && contains_any_tag;
     };
 

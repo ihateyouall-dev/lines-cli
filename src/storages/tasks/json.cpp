@@ -13,7 +13,7 @@ auto Lines::TasksJSON::to_json(const Lines::Task &task) -> nlohmann::json {
         result["tags"].push_back(tag);
     }
 
-    result["state"] = task.completion().state();
+    result["completed"] = task.completed();
     return result;
 }
 
@@ -27,14 +27,15 @@ auto Lines::TasksJSON::from_json(const nlohmann::json &json) -> Lines::Task {
         }
     }
 
-    Lines::TaskCompletion completion;
-    if (json.contains("state")) {
-        TaskCompletion::State state = json["state"].get<TaskCompletion::State>();
-        completion.set_state(state);
+    bool completed{};
+    if (json.contains("completed")) {
+        bool completed = json["state"].get<bool>();
     }
 
     Lines::Task task(info);
-    task.completion() = completion;
+    if (completed) {
+        task.complete();
+    }
     return task;
 }
 

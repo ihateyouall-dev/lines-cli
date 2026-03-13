@@ -26,7 +26,7 @@ auto tags_to_string(const Lines::Task &task) -> std::string {
 }
 
 auto completion_sign(const Lines::Task &task) -> std::string {
-    return std::format("[{}]", (task.completion().completed() ? "X" : " "));
+    return std::format("[{}]", (task.completed() ? "X" : " "));
 }
 
 auto task_to_string_unfolded(const Lines::Task &task) -> std::string {
@@ -68,7 +68,7 @@ void Tasks::showing_init(CLI::App &app) {
 
     add_filter_options(*show, "Show");
 
-    show->callback([this] {
+    show->callback([this]() -> void {
         auto tasks = filter(_storage, _tasks_filter_rule);
         if (tasks.empty()) {
             std::cerr << "ERROR: Task not found\n";
@@ -91,7 +91,7 @@ void Tasks::addition_init(CLI::App &app) {
     add->add_option("-d,--description", _added_task_info.description, "Give task a description");
     add->add_option("-t,--tags", _added_task_info.tags, "Give task a tags");
 
-    add->callback([this] {
+    add->callback([this]() -> void {
         Lines::Task task{_added_task_info};
         std::cout << std::format("Added task:\n{}\n", task_to_string_unfolded(task));
         _storage.add(Lines::Task{_added_task_info});
@@ -107,7 +107,7 @@ void Tasks::editing_init(CLI::App &app) {
                      "Give task a new description");
     edit->add_option("-t,--tags", _changed_task_info.tags, "Give task a new tags");
 
-    edit->callback([this] {
+    edit->callback([this]() -> void {
         auto *task = require_task(*_tasks_filter_rule.id);
         if (!task) {
             return;
@@ -139,7 +139,7 @@ void Tasks::deletion_init(CLI::App &app) {
 
     delete_app->add_flag("-f,--force", _force, "Force deletion");
 
-    delete_app->callback([this] {
+    delete_app->callback([this]() -> void {
         auto tasks = filter(_storage, _tasks_filter_rule);
         if (tasks.empty()) {
             std::cerr << "ERROR: Task not found\n";
@@ -176,7 +176,7 @@ void Tasks::completion_init(CLI::App &app) {
     add_filter_options(*complete, "Complete");
     add_filter_options(*uncomplete, "Uncomplete");
 
-    complete->callback([this] {
+    complete->callback([this]() -> void {
         auto tasks = filter(_storage, _tasks_filter_rule);
         if (tasks.empty()) {
             std::cerr << "ERROR: Task not found\n";
@@ -184,21 +184,21 @@ void Tasks::completion_init(CLI::App &app) {
         }
         if (tasks.size() == 1) {
             auto task = tasks[0];
-            if (task.task->completion().completed()) {
+            if (task.task->completed()) {
                 std::cerr << "ERROR: Task already completed\n";
                 return;
             }
-            task.task->completion().complete();
+            task.task->complete();
             std::cout << std::format("ID: {}\n{}\n", task.id, task_to_string_unfolded(*task.task));
         } else {
             for (const auto &task : tasks) {
-                task.task->completion().complete();
+                task.task->complete();
                 std::cout << std::format("{}. {}\n", task.id, task_to_string(*task.task));
             }
         }
         _dirty = true;
     });
-    uncomplete->callback([this] {
+    uncomplete->callback([this]() -> void {
         auto tasks = filter(_storage, _tasks_filter_rule);
         if (tasks.empty()) {
             std::cerr << "ERROR: Task not found\n";
@@ -206,15 +206,15 @@ void Tasks::completion_init(CLI::App &app) {
         }
         if (tasks.size() == 1) {
             auto task = tasks[0];
-            if (!task.task->completion().completed()) {
+            if (!task.task->completed()) {
                 std::cerr << "ERROR: Task not completed\n";
                 return;
             }
-            task.task->completion().reset();
+            task.task->uncomplete();
             std::cout << std::format("ID: {}\n{}\n", task.id, task_to_string_unfolded(*task.task));
         } else {
             for (const auto &task : tasks) {
-                task.task->completion().reset();
+                task.task->uncomplete();
                 std::cout << std::format("{}. {}\n", task.id, task_to_string(*task.task));
             }
         }
