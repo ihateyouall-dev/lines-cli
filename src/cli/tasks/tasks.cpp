@@ -167,6 +167,8 @@ void Tasks::editing_init(CLI::App &app) {
     edit->add_option("-d,--description", _changed_task_info.description,
                      "Give task a new description");
     edit->add_option("-t,--tags", _changed_task_info.tags, "Give task a new tags");
+    edit->add_option("--dd,--date", _changed_task_info.date,
+                     "Give task a new date (Enter \"0\" to just disable existing date)");
 
     edit->callback([this]() -> void {
         auto *task = require_task(*_tasks_filter_rule.id);
@@ -175,13 +177,25 @@ void Tasks::editing_init(CLI::App &app) {
         }
         auto tmp = *task;
         if (_changed_task_info.title) {
-            tmp.set_title(_changed_task_info.title.value());
+            tmp.set_title(*_changed_task_info.title);
         }
         if (_changed_task_info.description) {
             tmp.set_description(*_changed_task_info.description);
         }
-        if (_changed_task_info.tags.has_value()) {
+        if (_changed_task_info.tags) {
             tmp.set_tags(*_changed_task_info.tags);
+        }
+        if (_changed_task_info.date) {
+            if (*_changed_task_info.date == "0") {
+                tmp.set_deadline(std::nullopt);
+            } else {
+                try {
+                    tmp.set_deadline(date_from_string(*_changed_task_info.date));
+                } catch (const std::invalid_argument &e) {
+                    std::cerr << std::format("ERROR: {}\n", e.what());
+                    return;
+                }
+            }
         }
         std::cout << std::format("Edited task:\n{}", task_to_string_unfolded(tmp));
         bool confirmed = confirm();

@@ -1,6 +1,7 @@
 #include "filter.hpp"
 #include "storages/utils/filesystem.hpp"
 #include <lines/tasks/task.hpp>
+#include <random>
 #include <storages/tasks/json.hpp>
 
 namespace CLI {
@@ -14,6 +15,7 @@ class Tasks { // NOLINT
         std::optional<std::string> title;
         std::optional<std::string> description;
         std::optional<std::vector<std::string>> tags;
+        std::optional<std::string> date;
     } _changed_task_info;
     Lines::TasksJSONStorage _storage{Lines::detail::get_fs_dotfile_storage() / "lines" / "saves" /
                                      "tasks.json"};
