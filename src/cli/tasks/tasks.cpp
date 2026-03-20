@@ -1,3 +1,6 @@
+#include "lines/tasks/task.hpp"
+#include "lines/temporal/date.hpp"
+#include "lines/temporal/ymd.hpp"
 #include <CLI/CLI.hpp>
 #include <cctype>
 #include <cli/tasks/tasks.hpp>
@@ -15,6 +18,11 @@ auto confirm() -> bool {
         return false;
     }
     return std::tolower(static_cast<unsigned char>(answer[0])) == 'y';
+}
+
+auto date_to_string(const Lines::Temporal::Date &date) -> std::string {
+    return std::format("{:04}.{:02}.{:02}", int(date.year()), unsigned(date.month()),
+                       unsigned(date.day()));
 }
 
 auto tags_to_string(const Lines::Task &task) -> std::string {
@@ -39,15 +47,59 @@ auto task_to_string_unfolded(const Lines::Task &task) -> std::string {
     if (!task.tags().empty()) {
         result += std::format("Tags:{}\n", tags_to_string(task));
     }
+    if (task.deadline()) {
+        result += std::format("Date: {}\n", date_to_string(*task.deadline()));
+    }
     result += '\n' + completion_sign(task);
     return result;
 }
 
 auto task_to_string(const Lines::Task &task) -> std::string {
-    if (task.tags().empty()) {
-        return std::format("{} {}", completion_sign(task), task.title());
+    std::string res = std::format("{} ", completion_sign(task));
+    if (task.deadline()) {
+        res += std::format("{} ", date_to_string(*task.deadline()));
     }
-    return std::format("{} {}{}", completion_sign(task), task.title(), tags_to_string(task));
+    res += task.title();
+    if (!task.tags().empty()) {
+        res += tags_to_string(task);
+    }
+    return res;
+}
+
+auto parse_int(std::string_view sv) -> int {
+    int value{};
+    auto res = std::from_chars(sv.data(), sv.data() + sv.size(), value); // NOLINT
+    if (res.ec != std::errc{}) {
+        throw std::invalid_argument("Invalid integer");
+    }
+    return value;
+}
+
+auto date_from_string(std::string_view str) -> Lines::Temporal::Date {
+    auto first = str.find('.');
+    auto second = str.find('.', first + 1);
+
+    if (first == std::string_view::npos || second == std::string_view::npos) {
+        throw std::invalid_argument("Invalid date format, expected YYYY.MM.DD");
+    }
+
+    auto year_sv = str.substr(0, first);
+    auto month_sv = str.substr(first + 1, second - first - 1);
+    auto day_sv = str.substr(second + 1);
+
+    auto year = Lines::Temporal::Year{parse_int(year_sv)};
+    auto month = Lines::Temporal::Month(parse_int(month_sv));
+    auto day = Lines::Temporal::Day(parse_int(day_sv));
+
+    if (!month.ok()) {
+        throw std::invalid_argument("Month must be in [1;12]");
+    }
+
+    if (!day.ok()) {
+        throw std::invalid_argument("Day must be in [1;31]");
+    }
+
+    return {year, month, day};
 }
 } // namespace
 
@@ -90,11 +142,20 @@ void Tasks::addition_init(CLI::App &app) {
     add->add_option("title", _added_task_info.title, "Give task a title")->required();
     add->add_option("-d,--description", _added_task_info.description, "Give task a description");
     add->add_option("-t,--tags", _added_task_info.tags, "Give task a tags");
+    add->add_option("--dd,--date", _added_task_deadline, "Give task a planned date");
 
     add->callback([this]() -> void {
         Lines::Task task{_added_task_info};
+        try {
+            if (_added_task_deadline) {
+                task.set_deadline(date_from_string(*_added_task_deadline));
+            }
+        } catch (const std::invalid_argument &e) {
+            std::cerr << std::format("ERROR: {}\n", e.what());
+            return;
+        }
         std::cout << std::format("Added task:\n{}\n", task_to_string_unfolded(task));
-        _storage.add(Lines::Task{_added_task_info});
+        _storage.add(task);
         _dirty = true;
     });
 }

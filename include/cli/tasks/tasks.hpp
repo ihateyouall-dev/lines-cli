@@ -1,4 +1,5 @@
 #include "filter.hpp"
+#include "storages/utils/filesystem.hpp"
 #include <lines/tasks/task.hpp>
 #include <storages/tasks/json.hpp>
 
@@ -8,12 +9,14 @@ class App;
 
 class Tasks { // NOLINT
     Lines::TaskInfo _added_task_info;
+    std::optional<std::string> _added_task_deadline;
     struct TaskChanges {
         std::optional<std::string> title;
         std::optional<std::string> description;
         std::optional<std::vector<std::string>> tags;
     } _changed_task_info;
-    Lines::TasksJSONStorage _storage{"lines_tasks.json"};
+    Lines::TasksJSONStorage _storage{Lines::detail::get_fs_dotfile_storage() / "lines" / "saves" /
+                                     "tasks.json"};
     bool _dirty = false;
     bool _force = false;
     Lines::TasksFilterRule _tasks_filter_rule;
