@@ -1,8 +1,10 @@
+#include "CLI/CLI.hpp"
 #include "lines/tasks/task.hpp"
+#include "lines/temporal/clocks.hpp"
 #include "lines/temporal/date.hpp"
 #include "lines/temporal/ymd.hpp"
-#include <CLI/CLI.hpp>
 #include <cctype>
+#include <charconv>
 #include <cli/tasks/tasks.hpp>
 #include <cstddef>
 #include <format>
@@ -101,6 +103,12 @@ auto date_from_string(std::string_view str) -> Lines::Temporal::Date {
 
     return {year, month, day};
 }
+
+auto today() -> Lines::Temporal::Date { return Lines::Temporal::LocalClock::today(); }
+auto today_str() -> std::string { return date_to_string(today()); }
+
+auto tomorrow() -> Lines::Temporal::Date { return today() + Lines::Temporal::Days{1}; }
+auto tomorrow_str() -> std::string { return date_to_string(tomorrow()); }
 } // namespace
 
 Tasks::Tasks() { _storage.load_from_file(); }; // NOLINT
@@ -123,7 +131,7 @@ void Tasks::showing_init(CLI::App &app) {
     show->callback([this]() -> void {
         auto tasks = filter(_storage, _tasks_filter_rule);
         if (tasks.empty()) {
-            std::cerr << "ERROR: Task not found\n";
+            std::cerr << "Seems like there's no tasks, take break ;)\n";
             return;
         }
         if (tasks.size() == 1) {
@@ -142,7 +150,15 @@ void Tasks::addition_init(CLI::App &app) {
     add->add_option("title", _added_task_info.title, "Give task a title")->required();
     add->add_option("-d,--description", _added_task_info.description, "Give task a description");
     add->add_option("-t,--tags", _added_task_info.tags, "Give task a tags");
-    add->add_option("--dd,--date", _added_task_deadline, "Give task a planned date");
+
+    add->add_option("-D,--date", _added_task_deadline,
+                    "Give task a planned date (format: YYYY.MM.DD)");
+    add->add_flag_callback(
+        "--td,--today", [this]() -> void { _added_task_deadline = today_str(); },
+        "Same as --date * TODAY *");
+    add->add_flag_callback(
+        "--tm,--tomorrow", [this]() -> void { _added_task_deadline = tomorrow_str(); },
+        "Same as --date * TOMORROW *");
 
     add->callback([this]() -> void {
         Lines::Task task{_added_task_info};
@@ -151,10 +167,10 @@ void Tasks::addition_init(CLI::App &app) {
                 task.set_deadline(date_from_string(*_added_task_deadline));
             }
         } catch (const std::invalid_argument &e) {
-            std::cerr << std::format("ERROR: {}\n", e.what());
-            return;
+            throw CLI::ValidationError(e.what());
         }
-        std::cout << std::format("Added task:\n{}\n", task_to_string_unfolded(task));
+        std::size_t id = _storage.size();
+        std::cout << std::format("Added task:\nID: {}\n{}\n", id, task_to_string_unfolded(task));
         _storage.add(task);
         _dirty = true;
     });
@@ -167,8 +183,18 @@ void Tasks::editing_init(CLI::App &app) {
     edit->add_option("-d,--description", _changed_task_info.description,
                      "Give task a new description");
     edit->add_option("-t,--tags", _changed_task_info.tags, "Give task a new tags");
-    edit->add_option("--dd,--date", _changed_task_info.date,
-                     "Give task a new date (Enter \"0\" to just disable existing date)");
+
+    // Date editing
+    edit->add_option(
+        "-D,--date", _changed_task_info.date,
+        "Give task a new date (format: YYYY.MM.DD, Enter \"0\" to just disable existing date)");
+    edit->add_flag_callback(
+        "--td,--today", [this]() -> void { _changed_task_info.date = today_str(); },
+        "Same as --date * TODAY *");
+
+    edit->add_flag_callback(
+        "--tm,--tomorrow", [this]() -> void { _changed_task_info.date = tomorrow_str(); },
+        "Same as --date * TOMORROW *");
 
     edit->callback([this]() -> void {
         auto *task = require_task(*_tasks_filter_rule.id);
@@ -192,8 +218,7 @@ void Tasks::editing_init(CLI::App &app) {
                 try {
                     tmp.set_deadline(date_from_string(*_changed_task_info.date));
                 } catch (const std::invalid_argument &e) {
-                    std::cerr << std::format("ERROR: {}\n", e.what());
-                    return;
+                    throw CLI::ValidationError(e.what());
                 }
             }
         }
@@ -245,8 +270,8 @@ void Tasks::deletion_init(CLI::App &app) {
 }
 
 void Tasks::completion_init(CLI::App &app) {
-    auto *complete = app.add_subcommand("complete", "Complete the task");
-    auto *uncomplete = app.add_subcommand("uncomplete", "Uncomplete the task");
+    auto *complete = app.add_subcommand("complete", "Complete tasks");
+    auto *uncomplete = app.add_subcommand("uncomplete", "Uncomplete tasks");
 
     add_filter_options(*complete, "Complete");
     add_filter_options(*uncomplete, "Uncomplete");
@@ -317,9 +342,38 @@ void Tasks::add_filter_options(CLI::App &app, const std::string_view &desc_prefi
     auto *filters = app.add_option_group("filters");
     filters->add_option("-i,--id", _tasks_filter_rule.id,
                         std::format("{} task with given id", desc_prefix));
+    // Tag specific filters
     filters->add_option(
         "-T,--any-tag", _tasks_filter_rule.any_tag,
         std::format("{} only tasks that have at least one of given tags", desc_prefix));
     filters->add_option("-A,--all-tags", _tasks_filter_rule.all_tags,
                         std::format("{} only tasks that have all of given tags", desc_prefix));
+    // Date & time(TODO) specific filters
+    filters->add_option_function<std::string_view>(
+        "-D,--date",
+        [this](std::string_view date) -> void {
+            try {
+                _tasks_filter_rule.date = date_from_string(date);
+            } catch (std::invalid_argument &e) {
+                throw CLI::ValidationError(e.what());
+            }
+        },
+        std::format("{} task with given date (format: YYYY.MM.DD)", desc_prefix));
+    filters->add_flag_callback(
+        "--td,--today", [this]() -> void { _tasks_filter_rule.date = today(); },
+        std::format("{} only tasks that planned on today", desc_prefix));
+    filters->add_flag_callback(
+        "--tm,--tomorrow", [this]() -> void { _tasks_filter_rule.date = tomorrow(); },
+        std::format("{} only tasks that planned on tomorrow", desc_prefix));
+
+    auto active_callback = [this](bool b) { // NOLINT
+        return [this, b]() -> void {
+            _tasks_filter_rule.active_bool = b;
+            _tasks_filter_rule.active_date = today();
+        };
+    };
+    filters->add_flag_callback("--ac,--active", active_callback(true),
+                               std::format("{} only active tasks", desc_prefix));
+    filters->add_flag_callback("--ex,--expired", active_callback(false),
+                               std::format("{} only expired tasks", desc_prefix));
 }

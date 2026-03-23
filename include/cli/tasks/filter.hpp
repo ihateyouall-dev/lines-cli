@@ -1,5 +1,6 @@
 #pragma once
 
+#include "lines/temporal/date.hpp"
 #include <vector>
 
 namespace Lines {
@@ -12,6 +13,9 @@ struct TasksFilterRule {
     std::optional<TaskID> id;
     std::optional<std::vector<TaskTag>> any_tag;
     std::optional<std::vector<TaskTag>> all_tags;
+    std::optional<Lines::Temporal::Date> date;
+    std::optional<bool> active_bool;
+    std::optional<Lines::Temporal::Date> active_date;
 };
 struct TasksFilterResult {
     using TaskID = std::size_t;

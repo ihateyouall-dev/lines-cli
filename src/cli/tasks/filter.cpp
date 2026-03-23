@@ -26,7 +26,10 @@ auto Lines::filter(Lines::TasksJSONStorage &storage, const TasksFilterRule &rule
             !rule.any_tag || std::ranges::any_of(*rule.any_tag, [&](const auto &tag) -> auto {
                 return has_tag(task, tag);
             });
-        return contains_all_tags && contains_any_tag;
+        bool satisfying_date = !rule.date || *task.deadline() == *rule.date;
+        bool satisfying_active =
+            !rule.active_bool || task.is_active(*rule.active_date) == *rule.active_bool;
+        return contains_all_tags && contains_any_tag && satisfying_date && satisfying_active;
     };
 
     for (std::size_t i{}; i < storage.size(); ++i) {
