@@ -2,6 +2,7 @@
 #include "storages/utils/filesystem.hpp"
 #include <lines/tasks/task.hpp>
 #include <storages/tasks/json.hpp>
+#include <string>
 
 namespace CLI {
 class App;
@@ -9,14 +10,15 @@ class App;
 
 class Tasks { // NOLINT
     Lines::TaskInfo _added_task_info;
-    std::optional<std::string> _added_task_deadline;
+    std::optional<std::string> _added_task_deadline_date;
+    std::optional<std::string> _added_task_deadline_time;
     struct TaskChanges {
         std::optional<std::string> title;
         std::optional<std::string> description;
         std::optional<std::vector<std::string>> tags;
-        std::optional<std::string> date;
+        std::optional<std::string> deadline_date;
     } _changed_task_info;
-    Lines::TasksJSONStorage _storage{Lines::detail::get_fs_dotfile_storage() / "lines" / "saves" /
+    Lines::TasksJSONStorage _storage{Lines::detail::get_fs_home() / ".lines.d" / "saves" /
                                      "tasks.json"};
     bool _dirty = false;
     bool _force = false;

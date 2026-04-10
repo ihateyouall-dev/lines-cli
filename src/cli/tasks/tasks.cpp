@@ -2,9 +2,10 @@
 #include "lines/tasks/task.hpp"
 #include "lines/temporal/clocks.hpp"
 #include "lines/temporal/date.hpp"
+#include "lines/temporal/duration.hpp"
+#include "lines/temporal/timestamp.hpp"
 #include "lines/temporal/ymd.hpp"
 #include <cctype>
-#include <charconv>
 #include <cli/tasks/tasks.hpp>
 #include <cstddef>
 #include <format>
@@ -68,40 +69,29 @@ auto task_to_string(const Lines::Task &task) -> std::string {
     return res;
 }
 
-auto parse_int(std::string_view sv) -> int {
-    int value{};
-    auto res = std::from_chars(sv.data(), sv.data() + sv.size(), value); // NOLINT
-    if (res.ec != std::errc{}) {
-        throw std::invalid_argument("Invalid integer");
-    }
-    return value;
+auto parse_date(const std::string &str) -> Lines::Temporal::Date {
+    std::stringstream ss(str);
+    int year{};
+    uint32_t month{};
+    uint32_t day{};
+    char divider{};
+
+    ss >> year >> divider >> month >> divider >> day;
+
+    return {Lines::Temporal::Year{year}, Lines::Temporal::Month{month}, Lines::Temporal::Day{day}};
 }
 
-auto date_from_string(std::string_view str) -> Lines::Temporal::Date {
-    auto first = str.find('.');
-    auto second = str.find('.', first + 1);
+auto parse_time(const std::string &str) -> Lines::Temporal::Timestamp {
+    std::stringstream ss(str);
+    int hours{};
+    int minutes{};
+    int seconds{};
+    char divider{};
 
-    if (first == std::string_view::npos || second == std::string_view::npos) {
-        throw std::invalid_argument("Invalid date format, expected YYYY.MM.DD");
-    }
+    ss >> hours >> divider >> minutes >> divider >> seconds;
 
-    auto year_sv = str.substr(0, first);
-    auto month_sv = str.substr(first + 1, second - first - 1);
-    auto day_sv = str.substr(second + 1);
-
-    auto year = Lines::Temporal::Year{parse_int(year_sv)};
-    auto month = Lines::Temporal::Month(parse_int(month_sv));
-    auto day = Lines::Temporal::Day(parse_int(day_sv));
-
-    if (!month.ok()) {
-        throw std::invalid_argument("Month must be in [1;12]");
-    }
-
-    if (!day.ok()) {
-        throw std::invalid_argument("Day must be in [1;31]");
-    }
-
-    return {year, month, day};
+    return {Lines::Temporal::Hours{hours}, Lines::Temporal::Minutes{minutes},
+            Lines::Temporal::Seconds{seconds}};
 }
 
 auto today() -> Lines::Temporal::Date { return Lines::Temporal::LocalClock::today(); }
@@ -151,20 +141,20 @@ void Tasks::addition_init(CLI::App &app) {
     add->add_option("-d,--description", _added_task_info.description, "Give task a description");
     add->add_option("-t,--tags", _added_task_info.tags, "Give task a tags");
 
-    add->add_option("-D,--date", _added_task_deadline,
+    add->add_option("-D,--date", _added_task_deadline_date,
                     "Give task a planned date (format: YYYY.MM.DD)");
     add->add_flag_callback(
-        "--td,--today", [this]() -> void { _added_task_deadline = today_str(); },
+        "--td,--today", [this]() -> void { _added_task_deadline_date = today_str(); },
         "Same as --date * TODAY *");
     add->add_flag_callback(
-        "--tm,--tomorrow", [this]() -> void { _added_task_deadline = tomorrow_str(); },
+        "--tm,--tomorrow", [this]() -> void { _added_task_deadline_date = tomorrow_str(); },
         "Same as --date * TOMORROW *");
 
     add->callback([this]() -> void {
         Lines::Task task{_added_task_info};
         try {
-            if (_added_task_deadline) {
-                task.set_deadline(date_from_string(*_added_task_deadline));
+            if (_added_task_deadline_date) {
+                task.set_deadline(parse_date(*_added_task_deadline_date));
             }
         } catch (const std::invalid_argument &e) {
             throw CLI::ValidationError(e.what());
@@ -186,14 +176,14 @@ void Tasks::editing_init(CLI::App &app) {
 
     // Date editing
     edit->add_option(
-        "-D,--date", _changed_task_info.date,
+        "-D,--date", _changed_task_info.deadline_date,
         "Give task a new date (format: YYYY.MM.DD, Enter \"0\" to just disable existing date)");
     edit->add_flag_callback(
-        "--td,--today", [this]() -> void { _changed_task_info.date = today_str(); },
+        "--td,--today", [this]() -> void { _changed_task_info.deadline_date = today_str(); },
         "Same as --date * TODAY *");
 
     edit->add_flag_callback(
-        "--tm,--tomorrow", [this]() -> void { _changed_task_info.date = tomorrow_str(); },
+        "--tm,--tomorrow", [this]() -> void { _changed_task_info.deadline_date = tomorrow_str(); },
         "Same as --date * TOMORROW *");
 
     edit->callback([this]() -> void {
@@ -211,12 +201,12 @@ void Tasks::editing_init(CLI::App &app) {
         if (_changed_task_info.tags) {
             tmp.set_tags(*_changed_task_info.tags);
         }
-        if (_changed_task_info.date) {
-            if (*_changed_task_info.date == "0") {
+        if (_changed_task_info.deadline_date) {
+            if (*_changed_task_info.deadline_date == "0") {
                 tmp.set_deadline(std::nullopt);
             } else {
                 try {
-                    tmp.set_deadline(date_from_string(*_changed_task_info.date));
+                    tmp.set_deadline(parse_date(*_changed_task_info.deadline_date));
                 } catch (const std::invalid_argument &e) {
                     throw CLI::ValidationError(e.what());
                 }
@@ -349,11 +339,11 @@ void Tasks::add_filter_options(CLI::App &app, const std::string_view &desc_prefi
     filters->add_option("-A,--all-tags", _tasks_filter_rule.all_tags,
                         std::format("{} only tasks that have all of given tags", desc_prefix));
     // Date & time(TODO) specific filters
-    filters->add_option_function<std::string_view>(
+    filters->add_option_function<std::string>(
         "-D,--date",
-        [this](std::string_view date) -> void {
+        [this](const std::string &date) -> void {
             try {
-                _tasks_filter_rule.date = date_from_string(date);
+                _tasks_filter_rule.date = parse_date(date);
             } catch (std::invalid_argument &e) {
                 throw CLI::ValidationError(e.what());
             }
