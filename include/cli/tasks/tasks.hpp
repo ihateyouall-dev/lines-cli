@@ -34,6 +34,13 @@ class Tasks { // NOLINT
     void deletion_init(CLI::App &app);
     void completion_init(CLI::App &app);
 
+    void showing_callback();
+    void editing_callback();
+    void addition_callback();
+    void deletion_callback();
+    void complete_callback();
+    void uncomplete_callback();
+
   public:
     Tasks();
     Tasks(const Tasks &) = default;

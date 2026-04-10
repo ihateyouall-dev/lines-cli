@@ -23,12 +23,12 @@ auto confirm() -> bool {
     return std::tolower(static_cast<unsigned char>(answer[0])) == 'y';
 }
 
-auto date_to_string(const Lines::Temporal::Date &date) -> std::string {
+auto date_str(const Lines::Temporal::Date &date) -> std::string {
     return std::format("{:04}.{:02}.{:02}", int(date.year()), unsigned(date.month()),
                        unsigned(date.day()));
 }
 
-auto tags_to_string(const Lines::Task &task) -> std::string {
+auto tags_str(const Lines::Task &task) -> std::string {
     std::string result;
     for (const auto &tag : task.tags()) {
         result += std::format(" #{}", tag);
@@ -40,7 +40,7 @@ auto completion_sign(const Lines::Task &task) -> std::string {
     return std::format("[{}]", (task.completed() ? "X" : " "));
 }
 
-auto task_to_string_unfolded(const Lines::Task &task) -> std::string {
+auto task_str_unfolded(const Lines::Task &task) -> std::string {
     std::string result = std::format("Title: {}\n", task.title());
     if (task.description()) {
         if (!task.description().value().empty()) {
@@ -48,23 +48,23 @@ auto task_to_string_unfolded(const Lines::Task &task) -> std::string {
         }
     }
     if (!task.tags().empty()) {
-        result += std::format("Tags:{}\n", tags_to_string(task));
+        result += std::format("Tags:{}\n", tags_str(task));
     }
     if (task.deadline()) {
-        result += std::format("Date: {}\n", date_to_string(*task.deadline()));
+        result += std::format("Date: {}\n", date_str(*task.deadline()));
     }
     result += '\n' + completion_sign(task);
     return result;
 }
 
-auto task_to_string(const Lines::Task &task) -> std::string {
+auto task_str(const Lines::Task &task) -> std::string {
     std::string res = std::format("{} ", completion_sign(task));
     if (task.deadline()) {
-        res += std::format("{} ", date_to_string(*task.deadline()));
+        res += std::format("{} ", date_str(*task.deadline()));
     }
     res += task.title();
     if (!task.tags().empty()) {
-        res += tags_to_string(task);
+        res += tags_str(task);
     }
     return res;
 }
@@ -95,10 +95,10 @@ auto parse_time(const std::string &str) -> Lines::Temporal::Timestamp {
 }
 
 auto today() -> Lines::Temporal::Date { return Lines::Temporal::LocalClock::today(); }
-auto today_str() -> std::string { return date_to_string(today()); }
+auto today_str() -> std::string { return date_str(today()); }
 
 auto tomorrow() -> Lines::Temporal::Date { return today() + Lines::Temporal::Days{1}; }
-auto tomorrow_str() -> std::string { return date_to_string(tomorrow()); }
+auto tomorrow_str() -> std::string { return date_str(tomorrow()); }
 } // namespace
 
 Tasks::Tasks() { _storage.load_from_file(); }; // NOLINT
@@ -118,21 +118,7 @@ void Tasks::showing_init(CLI::App &app) {
 
     add_filter_options(*show, "Show");
 
-    show->callback([this]() -> void {
-        auto tasks = filter(_storage, _tasks_filter_rule);
-        if (tasks.empty()) {
-            std::cerr << "Seems like there's no tasks, take break ;)\n";
-            return;
-        }
-        if (tasks.size() == 1) {
-            std::cout << std::format("ID: {}\n{}\n", tasks[0].id,
-                                     task_to_string_unfolded(*tasks[0].task));
-            return;
-        }
-        for (const auto &task : tasks) {
-            std::cout << std::format("{}. {}\n", task.id, task_to_string(*task.task));
-        }
-    });
+    show->callback([this]() -> void { showing_callback(); });
 }
 
 void Tasks::addition_init(CLI::App &app) {
@@ -150,20 +136,7 @@ void Tasks::addition_init(CLI::App &app) {
         "--tm,--tomorrow", [this]() -> void { _added_task_deadline_date = tomorrow_str(); },
         "Same as --date * TOMORROW *");
 
-    add->callback([this]() -> void {
-        Lines::Task task{_added_task_info};
-        try {
-            if (_added_task_deadline_date) {
-                task.set_deadline(parse_date(*_added_task_deadline_date));
-            }
-        } catch (const std::invalid_argument &e) {
-            throw CLI::ValidationError(e.what());
-        }
-        std::size_t id = _storage.size();
-        std::cout << std::format("Added task:\nID: {}\n{}\n", id, task_to_string_unfolded(task));
-        _storage.add(task);
-        _dirty = true;
-    });
+    add->callback([this]() -> void { addition_callback(); });
 }
 
 void Tasks::editing_init(CLI::App &app) {
@@ -174,7 +147,7 @@ void Tasks::editing_init(CLI::App &app) {
                      "Give task a new description");
     edit->add_option("-t,--tags", _changed_task_info.tags, "Give task a new tags");
 
-    // Date editing
+    // Date & time editing
     edit->add_option(
         "-D,--date", _changed_task_info.deadline_date,
         "Give task a new date (format: YYYY.MM.DD, Enter \"0\" to just disable existing date)");
@@ -186,40 +159,7 @@ void Tasks::editing_init(CLI::App &app) {
         "--tm,--tomorrow", [this]() -> void { _changed_task_info.deadline_date = tomorrow_str(); },
         "Same as --date * TOMORROW *");
 
-    edit->callback([this]() -> void {
-        auto *task = require_task(*_tasks_filter_rule.id);
-        if (!task) {
-            return;
-        }
-        auto tmp = *task;
-        if (_changed_task_info.title) {
-            tmp.set_title(*_changed_task_info.title);
-        }
-        if (_changed_task_info.description) {
-            tmp.set_description(*_changed_task_info.description);
-        }
-        if (_changed_task_info.tags) {
-            tmp.set_tags(*_changed_task_info.tags);
-        }
-        if (_changed_task_info.deadline_date) {
-            if (*_changed_task_info.deadline_date == "0") {
-                tmp.set_deadline(std::nullopt);
-            } else {
-                try {
-                    tmp.set_deadline(parse_date(*_changed_task_info.deadline_date));
-                } catch (const std::invalid_argument &e) {
-                    throw CLI::ValidationError(e.what());
-                }
-            }
-        }
-        std::cout << std::format("Edited task:\n{}", task_to_string_unfolded(tmp));
-        bool confirmed = confirm();
-        if (!confirmed) {
-            return;
-        }
-        *task = tmp;
-        _dirty = true;
-    });
+    edit->callback([this]() -> void { editing_callback(); });
 }
 
 void Tasks::deletion_init(CLI::App &app) {
@@ -229,34 +169,7 @@ void Tasks::deletion_init(CLI::App &app) {
 
     delete_app->add_flag("-f,--force", _force, "Force deletion");
 
-    delete_app->callback([this]() -> void {
-        auto tasks = filter(_storage, _tasks_filter_rule);
-        if (tasks.empty()) {
-            std::cerr << "ERROR: Task not found\n";
-            return;
-        }
-        if (tasks.size() == 1) {
-            std::cout << std::format("Deleted task:\nID: {}\n{}\n", tasks[0].id,
-                                     task_to_string_unfolded(*tasks[0].task));
-        } else {
-            std::cout << "Deleted tasks:\n";
-            for (const auto &task : tasks) {
-                std::cout << std::format("{}. {}\n", task.id, task_to_string(*task.task));
-            }
-        }
-
-        if (!_force) {
-            bool confirmed = confirm();
-            if (!confirmed) {
-                return;
-            }
-        }
-
-        for (const auto &task : std::ranges::reverse_view(tasks)) {
-            _storage.erase(static_cast<std::ptrdiff_t>(task.id));
-        }
-        _dirty = true;
-    });
+    delete_app->callback([this]() -> void { deletion_callback(); });
 }
 
 void Tasks::completion_init(CLI::App &app) {
@@ -266,50 +179,8 @@ void Tasks::completion_init(CLI::App &app) {
     add_filter_options(*complete, "Complete");
     add_filter_options(*uncomplete, "Uncomplete");
 
-    complete->callback([this]() -> void {
-        auto tasks = filter(_storage, _tasks_filter_rule);
-        if (tasks.empty()) {
-            std::cerr << "ERROR: Task not found\n";
-            return;
-        }
-        if (tasks.size() == 1) {
-            auto task = tasks[0];
-            if (task.task->completed()) {
-                std::cerr << "ERROR: Task already completed\n";
-                return;
-            }
-            task.task->complete();
-            std::cout << std::format("ID: {}\n{}\n", task.id, task_to_string_unfolded(*task.task));
-        } else {
-            for (const auto &task : tasks) {
-                task.task->complete();
-                std::cout << std::format("{}. {}\n", task.id, task_to_string(*task.task));
-            }
-        }
-        _dirty = true;
-    });
-    uncomplete->callback([this]() -> void {
-        auto tasks = filter(_storage, _tasks_filter_rule);
-        if (tasks.empty()) {
-            std::cerr << "ERROR: Task not found\n";
-            return;
-        }
-        if (tasks.size() == 1) {
-            auto task = tasks[0];
-            if (!task.task->completed()) {
-                std::cerr << "ERROR: Task not completed\n";
-                return;
-            }
-            task.task->uncomplete();
-            std::cout << std::format("ID: {}\n{}\n", task.id, task_to_string_unfolded(*task.task));
-        } else {
-            for (const auto &task : tasks) {
-                task.task->uncomplete();
-                std::cout << std::format("{}. {}\n", task.id, task_to_string(*task.task));
-            }
-        }
-        _dirty = true;
-    });
+    complete->callback([this]() -> void { complete_callback(); });
+    uncomplete->callback([this]() -> void { uncomplete_callback(); });
 }
 
 void Tasks::init(CLI::App &app) {
@@ -366,4 +237,144 @@ void Tasks::add_filter_options(CLI::App &app, const std::string_view &desc_prefi
                                std::format("{} only active tasks", desc_prefix));
     filters->add_flag_callback("--ex,--expired", active_callback(false),
                                std::format("{} only expired tasks", desc_prefix));
+}
+
+void Tasks::addition_callback() {
+    Lines::Task task{_added_task_info};
+    try {
+        if (_added_task_deadline_date) {
+            task.set_deadline(parse_date(*_added_task_deadline_date));
+        }
+    } catch (const std::invalid_argument &e) {
+        throw CLI::ValidationError(e.what());
+    }
+    std::size_t id = _storage.size();
+    std::cout << std::format("Added task:\nID: {}\n{}\n", id, task_str_unfolded(task));
+    _storage.add(task);
+    _dirty = true;
+}
+
+void Tasks::editing_callback() {
+    auto *task = require_task(*_tasks_filter_rule.id);
+    if (task == nullptr) {
+        return;
+    }
+    auto tmp = *task;
+    if (_changed_task_info.title) {
+        tmp.set_title(*_changed_task_info.title);
+    }
+    if (_changed_task_info.description) {
+        tmp.set_description(*_changed_task_info.description);
+    }
+    if (_changed_task_info.tags) {
+        tmp.set_tags(*_changed_task_info.tags);
+    }
+    if (_changed_task_info.deadline_date) {
+        if (*_changed_task_info.deadline_date == "0") {
+            tmp.set_deadline(std::nullopt);
+        } else {
+            try {
+                tmp.set_deadline(parse_date(*_changed_task_info.deadline_date));
+            } catch (const std::invalid_argument &e) {
+                throw CLI::ValidationError(e.what());
+            }
+        }
+    }
+    std::cout << std::format("Edited task:\n{}", task_str_unfolded(tmp));
+    bool confirmed = confirm();
+    if (!confirmed) {
+        return;
+    }
+    *task = tmp;
+    _dirty = true;
+}
+
+void Tasks::showing_callback() {
+    auto tasks = filter(_storage, _tasks_filter_rule);
+    if (tasks.empty()) {
+        std::cerr << "Seems like there's no tasks, take break ;)\n";
+        return;
+    }
+    if (tasks.size() == 1) {
+        std::cout << std::format("ID: {}\n{}\n", tasks[0].id, task_str_unfolded(*tasks[0].task));
+        return;
+    }
+    for (const auto &task : tasks) {
+        std::cout << std::format("{}. {}\n", task.id, task_str(*task.task));
+    }
+}
+
+void Tasks::deletion_callback() {
+    auto tasks = filter(_storage, _tasks_filter_rule);
+    if (tasks.empty()) {
+        std::cerr << "ERROR: Task not found\n";
+        return;
+    }
+    if (tasks.size() == 1) {
+        std::cout << std::format("Deleted task:\nID: {}\n{}\n", tasks[0].id,
+                                 task_str_unfolded(*tasks[0].task));
+    } else {
+        std::cout << "Deleted tasks:\n";
+        for (const auto &task : tasks) {
+            std::cout << std::format("{}. {}\n", task.id, task_str(*task.task));
+        }
+    }
+
+    if (!_force) {
+        bool confirmed = confirm();
+        if (!confirmed) {
+            return;
+        }
+    }
+
+    for (const auto &task : std::ranges::reverse_view(tasks)) {
+        _storage.erase(static_cast<std::ptrdiff_t>(task.id));
+    }
+    _dirty = true;
+}
+
+void Tasks::complete_callback() {
+    auto tasks = filter(_storage, _tasks_filter_rule);
+    if (tasks.empty()) {
+        std::cerr << "ERROR: Task not found\n";
+        return;
+    }
+    if (tasks.size() == 1) {
+        auto task = tasks[0];
+        if (task.task->completed()) {
+            std::cerr << "ERROR: Task already completed\n";
+            return;
+        }
+        task.task->complete();
+        std::cout << std::format("ID: {}\n{}\n", task.id, task_str_unfolded(*task.task));
+    } else {
+        for (const auto &task : tasks) {
+            task.task->complete();
+            std::cout << std::format("{}. {}\n", task.id, task_str(*task.task));
+        }
+    }
+    _dirty = true;
+}
+
+void Tasks::uncomplete_callback() {
+    auto tasks = filter(_storage, _tasks_filter_rule);
+    if (tasks.empty()) {
+        std::cerr << "ERROR: Task not found\n";
+        return;
+    }
+    if (tasks.size() == 1) {
+        auto task = tasks[0];
+        if (!task.task->completed()) {
+            std::cerr << "ERROR: Task not completed\n";
+            return;
+        }
+        task.task->uncomplete();
+        std::cout << std::format("ID: {}\n{}\n", task.id, task_str_unfolded(*task.task));
+    } else {
+        for (const auto &task : tasks) {
+            task.task->uncomplete();
+            std::cout << std::format("{}. {}\n", task.id, task_str(*task.task));
+        }
+    }
+    _dirty = true;
 }
