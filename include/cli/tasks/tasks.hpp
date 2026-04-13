@@ -9,23 +9,26 @@ class App;
 }
 
 class Tasks { // NOLINT
-    Lines::TaskInfo _added_task_info;
-    std::optional<std::string> _added_task_deadline_date;
-    std::optional<std::string> _added_task_deadline_time;
-    struct TaskChanges {
+    // Options that gained from command line
+    struct Options {
         std::optional<std::string> title;
         std::optional<std::string> description;
         std::optional<std::vector<std::string>> tags;
-        std::optional<std::string> deadline_date;
-    } _changed_task_info;
+
+        std::optional<std::string> deadline;
+
+        bool force = false;
+
+        Lines::TasksFilterRule tasks_filter_rule;
+    } _options;
     Lines::TasksJSONStorage _storage{Lines::detail::get_fs_home() / ".lines.d" / "saves" /
                                      "tasks.json"};
     bool _dirty = false;
-    bool _force = false;
-    Lines::TasksFilterRule _tasks_filter_rule;
 
     auto require_task(std::size_t index) -> Lines::Task *;
 
+    void add_task_options(CLI::App &app, std::string_view desc_prefix, // NOLINT
+                          std::string_view format = "");
     void add_filter_options(CLI::App &app, const std::string_view &desc_prefix);
 
     void showing_init(CLI::App &app);
