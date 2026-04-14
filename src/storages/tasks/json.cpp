@@ -3,56 +3,15 @@
 #include <lines/tasks/task.hpp>
 #include <stdexcept>
 #include <storages/tasks/json.hpp>
-
-namespace {
-auto date_to_string(const Lines::Temporal::Date &date) -> std::string {
-    return std::format("{:04}.{:02}.{:02}", int(date.year()), unsigned(date.month()),
-                       unsigned(date.day()));
-}
-
-auto parse_int(std::string_view sv) -> int {
-    int value{};
-    auto res = std::from_chars(sv.data(), sv.data() + sv.size(), value); // NOLINT
-    if (res.ec != std::errc{}) {
-        throw std::invalid_argument("Invalid integer");
-    }
-    return value;
-}
-
-auto date_from_string(std::string_view str) -> Lines::Temporal::Date {
-    auto first = str.find('.');
-    auto second = str.find('.', first + 1);
-
-    if (first == std::string_view::npos || second == std::string_view::npos) {
-        throw std::invalid_argument("Invalid date format, expected YYYY.MM.DD");
-    }
-
-    auto year_sv = str.substr(0, first);
-    auto month_sv = str.substr(first + 1, second - first - 1);
-    auto day_sv = str.substr(second + 1);
-
-    auto year = Lines::Temporal::Year{parse_int(year_sv)};
-    auto month = Lines::Temporal::Month(parse_int(month_sv));
-    auto day = Lines::Temporal::Day(parse_int(day_sv));
-
-    if (!month.ok()) {
-        throw std::invalid_argument("Month must be in [1;12]");
-    }
-
-    if (!day.ok()) {
-        throw std::invalid_argument("Day must be in [1;31]");
-    }
-
-    return {year, month, day};
-}
-} // namespace
+#include <client-utils/parsers.hpp>
+#include <client-utils/utils.hpp>
 
 auto Lines::TasksJSON::to_json(const Lines::Task &task) -> nlohmann::json {
     nlohmann::json result;
     result["title"] = task.title();
     result["description"] = task.description().value_or("");
     if (task.deadline()) {
-        result["date"] = date_to_string(*task.deadline());
+        result["deadline"] = timepoint_str(*task.deadline());
     }
 
     for (const auto &tag : task.tags()) {
@@ -80,8 +39,8 @@ auto Lines::TasksJSON::from_json(const nlohmann::json &json) -> Lines::Task {
 
     Lines::Task task(info);
 
-    if (json.contains("date")) {
-        task.set_deadline(date_from_string(json["date"].get<std::string>()));
+    if (json.contains("deadline")) {
+        task.set_deadline(parse_timepoint(json["deadline"].get<std::string>()));
     }
 
     if (completed) {

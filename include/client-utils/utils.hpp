@@ -1,0 +1,27 @@
+#pragma once
+
+#include <string>
+#include <lines/temporal/timepoint.hpp>
+#include <lines/temporal/datetime.hpp>
+#include <lines/temporal/clocks.hpp>
+#include <lines/tasks/task.hpp>
+
+auto confirm() -> bool;
+
+auto date_str(const Lines::Temporal::Date &date) -> std::string;
+
+auto timepoint_str(const Lines::Temporal::TimePoint &tp) -> std::string;
+
+auto tags_str(const Lines::Task &task) -> std::string;
+
+auto completion_sign(const Lines::Task &task) -> std::string;
+
+auto task_str_unfolded(const Lines::Task &task) -> std::string;
+
+auto task_str(const Lines::Task &task) -> std::string;
+
+auto today() -> Lines::Temporal::Date;
+auto today_str() -> std::string;
+
+auto tomorrow() -> Lines::Temporal::Date;
+auto tomorrow_str() -> std::string;
