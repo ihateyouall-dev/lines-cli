@@ -1,5 +1,6 @@
 #include "CLI/CLI.hpp"
 #include "lines/tasks/task.hpp"
+#include "lines/temporal/datetime.hpp"
 #include "lines/temporal/timepoint.hpp"
 #include <cctype>
 #include <cli/tasks/tasks.hpp>
@@ -112,7 +113,8 @@ void Tasks::add_filter_options(CLI::App &app, const std::string_view &desc_prefi
     auto active_callback = [this](bool b) { // NOLINT
         return [this, b]() -> void {
             _options.tasks_filter_rule.active_bool = b;
-            _options.tasks_filter_rule.active_deadline = today();
+            _options.tasks_filter_rule.active_deadline =
+                Lines::Temporal::DateTime{today()}.time_point();
         };
     };
     filters->add_flag_callback("--ac,--active", active_callback(true),
@@ -131,8 +133,7 @@ void Tasks::addition_callback() {
 
     try {
         if (_options.deadline) {
-            task.set_deadline(
-                Lines::Temporal::TimePoint{parse_timepoint(*_options.deadline)});
+            task.set_deadline(Lines::Temporal::TimePoint{parse_timepoint(*_options.deadline)});
         }
     } catch (const std::invalid_argument &e) {
         throw CLI::ValidationError(e.what());
