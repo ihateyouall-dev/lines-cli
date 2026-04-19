@@ -10,3 +10,6 @@ add_executable(${PROJECT_NAME} src/main.cpp)
 add_subdirectory(src)
 
 target_link_libraries(${PROJECT_NAME} PRIVATE Lines::CLI::Root)
+
+enable_testing()
+add_subdirectory(tests)

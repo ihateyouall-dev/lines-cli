@@ -1,8 +1,9 @@
 #include <client-utils/parsers.hpp>
 #include <regex>
+#include <stdexcept>
 
 void range_error(std::string_view prefix, std::string_view range_str) {
-    throw std::invalid_argument(
+    throw std::out_of_range(
         std::format("ERROR: {} can be only in range {}", prefix, range_str));
 }
 
