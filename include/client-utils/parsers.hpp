@@ -10,4 +10,8 @@ auto parse_date(const std::string &str) -> Lines::Temporal::Date;
 
 auto parse_time(const std::string &str) -> Lines::Temporal::Timestamp;
 
+auto valid_relative_date(const std::string &str) -> bool;
+
+auto parse_relative_date(const std::string &str) -> Lines::Temporal::Date;
+
 auto parse_timepoint(const std::string &str) -> Lines::Temporal::TimePoint;
