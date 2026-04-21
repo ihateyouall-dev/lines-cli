@@ -1,5 +1,6 @@
 #include "lines/temporal/clocks.hpp"
 #include "lines/temporal/duration.hpp"
+#include "lines/temporal/timestamp.hpp"
 #include "lines/temporal/ymd.hpp"
 #include <algorithm>
 #include <client-utils/parsers.hpp>
@@ -41,14 +42,37 @@ void eval_date_operators(Lines::Temporal::Date &date, const std::vector<TimeOper
         case 'm':
             date += Lines::Temporal::Months{op.value};
             break;
-
+        case 'w':
+            date += Lines::Temporal::Weeks{op.value};
+            break;
         case 'd':
             date += Lines::Temporal::Days{op.value};
             break;
         default:
             throw std::invalid_argument(
                 std::format("ERROR: Unknown unit: {}. Only units are usable with relative dates "
-                            "are y(years), m(months) and d(days)",
+                            "are y(years), m(months), w(weeks) and d(days)",
+                            op.unit));
+        }
+    }
+}
+
+void eval_time_operators(Lines::Temporal::Timestamp &ts, const std::vector<TimeOperator> &ops) {
+    for (const auto &op : ops) {
+        switch (op.unit) {
+        case 'h':
+            ts += Lines::Temporal::Hours{op.value};
+            break;
+        case 'm':
+            ts += Lines::Temporal::Minutes{op.value};
+            break;
+        case 's':
+            ts += Lines::Temporal::Seconds{op.value};
+            break;
+        default:
+            throw std::invalid_argument(
+                std::format("ERROR: Unknown unit: {}. Only units are usable with time operators "
+                            "are h(hours), m(minutes) and s(seconds)",
                             op.unit));
         }
     }
@@ -146,42 +170,14 @@ auto parse_date_base(const std::string &str) -> Lines::Temporal::Date {
 
     return {t_year, t_month, t_day};
 }
-} // namespace
 
-auto parse_date(const std::string &str) -> Lines::Temporal::Date {
-    static const std::regex date_regex(R"(^(\d{4}\.\d{2}\.\d{2}|today|t)([+-]\d+[ymd])*$)",
-                                       std::regex::icase);
-    if (!std::regex_match(str, date_regex)) {
-        throw std::invalid_argument(
-            R"(
-ERROR: Unknown date format.
-Supported date formats:
+auto parse_time_base(const std::string &str) -> Lines::Temporal::Timestamp {
+    auto lower_str = to_lower_str(str);
 
-Absolute:
-  YYYY.MM.DD
-  YYYY.MM.DD[operators...]
-
-Relative:
-  TODAY | T
-  TODAY[operators...]
-
-Operators:
-  +N[ymd]  add time
-  -N[ymd]  subtract time
- )");
+    if (lower_str == "now") {
+        return Lines::Temporal::LocalClock::since_midnight();
     }
 
-    auto expr = split_time_expression(str);
-    Lines::Temporal::Date res{Lines::Temporal::Days{0}};
-
-    res = parse_date_base(expr.base);
-
-    eval_date_operators(res, parse_time_operators(expr.operators));
-
-    return res;
-}
-
-auto parse_time(const std::string &str) -> Lines::Temporal::Timestamp {
     std::stringstream ss(str);
     int hour{};
     int minute{};
@@ -204,6 +200,70 @@ auto parse_time(const std::string &str) -> Lines::Temporal::Timestamp {
 
     return {Lines::Temporal::Hours{hour}, Lines::Temporal::Minutes{minute},
             Lines::Temporal::Seconds{second}};
+}
+} // namespace
+
+auto parse_date(const std::string &str) -> Lines::Temporal::Date {
+    static const std::regex date_regex(R"(^(\d{4}\.\d{2}\.\d{2}|today|t)([+-]\d+[ymwd])*$)",
+                                       std::regex::icase);
+    if (!std::regex_match(str, date_regex)) {
+        throw std::invalid_argument(
+            R"(ERROR: Unknown date format.
+Supported date formats:
+
+Absolute:
+  YYYY.MM.DD
+  YYYY.MM.DD[operators...]
+
+Relative:
+  TODAY | T
+  TODAY[operators...]
+
+Operators:
+  +N[ymwd]  add time
+  -N[ymwd]  subtract time)");
+    }
+
+    auto expr = split_time_expression(str);
+    Lines::Temporal::Date res{Lines::Temporal::Days{0}};
+
+    res = parse_date_base(expr.base);
+
+    eval_date_operators(res, parse_time_operators(expr.operators));
+
+    return res;
+}
+
+auto parse_time(const std::string &str) -> Lines::Temporal::Timestamp {
+    static const std::regex time_regex(R"(^(\d{2}:\d{2}(:\d{2})?|now)([+-]\d+[hms])*$)",
+                                       std::regex::icase);
+
+    if (!std::regex_match(str, time_regex)) {
+        throw std::invalid_argument(
+            R"(ERROR: Unknown time format.
+Supported time formats:
+
+Absolute:
+  HH:MM:SS
+  HH:MM:SS[operators...]
+  HH:MM
+  HH:MM[operators...]
+
+Relative:
+  NOW
+  NOW[operators...]
+
+Operators:
+  +N[hms]  add time
+  -N[hms]  subtract time)");
+    }
+
+    auto expr = split_time_expression(str);
+    Lines::Temporal::Timestamp res = parse_time_base(expr.base);
+
+    eval_time_operators(res, parse_time_operators(expr.operators));
+
+    return res;
 }
 
 auto parse_timepoint(const std::string &str) -> Lines::Temporal::TimePoint {
