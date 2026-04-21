@@ -1,8 +1,8 @@
 #include <algorithm>
 #include <client-utils/parsers.hpp>
-#include <lines/temporal/clocks.hpp>
 #include <cstddef>
 #include <cstdint>
+#include <lines/temporal/clocks.hpp>
 #include <regex>
 #include <stdexcept>
 #include <string_view>
@@ -196,7 +196,7 @@ auto parse_time_base(const std::string &str) -> Lines::Temporal::Timestamp {
 } // namespace
 
 auto parse_date(const std::string &str) -> Lines::Temporal::Date {
-    static const std::regex date_regex(R"(^(\d{4}\.\d{2}\.\d{2}|today|t)([+-]\d+[ymwd])*$)",
+    static const std::regex date_regex(R"(^(\d{4}\.\d{2}\.\d{2}|today)([+-]\d+[ymwd])*$)",
                                        std::regex::icase);
     if (!std::regex_match(str, date_regex)) {
         throw std::invalid_argument(
@@ -208,7 +208,7 @@ Absolute:
   YYYY.MM.DD[operators...]
 
 Relative:
-  TODAY | T
+  TODAY
   TODAY[operators...]
 
 Operators:
@@ -262,6 +262,12 @@ auto parse_timepoint(const std::string &str) -> Lines::Temporal::TimePoint {
     std::size_t middle_divider = str.find('_');
 
     std::string date = str.substr(0, middle_divider);
+
+    if (middle_divider == std::string::npos) {
+        return Lines::Temporal::DateTime{parse_date(date),
+                                         Lines::Temporal::Timestamp{Lines::Temporal::Seconds{-1}}}.time_point();
+    }
+
     std::string time = str.substr(middle_divider + 1);
 
     return Lines::Temporal::DateTime{parse_date(date), parse_time(time)}.time_point();

@@ -1,5 +1,6 @@
 #include "lines/temporal/clocks.hpp"
 #include "lines/temporal/duration.hpp"
+#include "lines/temporal/timepoint.hpp"
 #include "lines/temporal/timestamp.hpp"
 #include <client-utils/parsers.hpp>
 #include <gtest/gtest.h>
@@ -157,11 +158,19 @@ TEST(Parsers, RelativeTimeOperators) {
     EXPECT_THROW(parse_time("NOW+65536h"), std::out_of_range);
 }
 
-// TEST(Parsers, TimePoint) {
-//     EXPECT_EQ(parse_timepoint("1970.01.01"),
-//               TimePoint{Seconds{0}});
-//     EXPECT_EQ(parse_timepoint("1970.01.01_23:59:59"),
-//               TimePoint{Seconds{86399}});
+TEST(Parsers, TimePoint) {
+    EXPECT_EQ(parse_timepoint("1970.01.01"), TimePoint{Seconds{86399}});
+    EXPECT_EQ(parse_timepoint("1970.01.01_23:59:59"), TimePoint{Seconds{86399}});
+    EXPECT_EQ(parse_timepoint("1970.01.01_01:00"), TimePoint{Seconds{3600}});
+    EXPECT_EQ(parse_timepoint("1970.01.01+1d_00:00+2h"), TimePoint{Seconds{93600}});
 
-//     EXPECT_THROW(parse_timepoint("Garbage"), std::invalid_argument);
-// }
+    EXPECT_EQ(parse_timepoint("TODAY_NOW"),
+              (DateTime{LocalClock::today(), LocalClock::since_midnight()}.time_point()));
+
+    EXPECT_EQ(parse_timepoint("TODAY+1d_NOW+2h"),
+              (DateTime{LocalClock::today() + Days{1}, LocalClock::since_midnight() + Hours{2}}
+                   .time_point()));
+
+    EXPECT_THROW(parse_timepoint("garbage"), std::invalid_argument);
+    EXPECT_THROW(parse_timepoint(""), std::invalid_argument);
+}
