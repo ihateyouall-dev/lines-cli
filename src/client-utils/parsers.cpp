@@ -3,7 +3,10 @@
 #include "lines/temporal/ymd.hpp"
 #include <algorithm>
 #include <client-utils/parsers.hpp>
+#include <climits>
 #include <cstddef>
+#include <cstdint>
+#include <ctime>
 #include <regex>
 #include <stdexcept>
 #include <string_view>
@@ -19,12 +22,17 @@ auto to_lower_str(std::string str) -> std::string {
     return str;
 }
 
-struct RelativeOperator {
-    int64_t value;
+struct TimeExprSplitResult {
+    std::string base;
+    std::string operators;
+};
+
+struct TimeOperator {
+    int value;
     char unit;
 };
 
-void eval_relative_date(Lines::Temporal::Date &date, const std::vector<RelativeOperator> &ops) {
+void eval_date_operators(Lines::Temporal::Date &date, const std::vector<TimeOperator> &ops) {
     for (const auto &op : ops) {
         switch (op.unit) {
         case 'y':
@@ -47,13 +55,13 @@ void eval_relative_date(Lines::Temporal::Date &date, const std::vector<RelativeO
 }
 
 // Parse operators after relative time point (e.g +1d+1m-1y... or +1h-1m+1s...)
-auto parse_relative_operators(std::string_view str) -> std::vector<RelativeOperator> {
-    std::vector<RelativeOperator> res;
+auto parse_time_operators(std::string_view str) -> std::vector<TimeOperator> {
+    std::vector<TimeOperator> res;
 
     std::size_t i{};
     while (i < str.size()) {
-        int8_t sign{};
-        int64_t num{};
+        int sign{};
+        int num{};
         char unit{};
 
         if (str[i] != '+' && str[i] != '-') {
@@ -65,31 +73,57 @@ auto parse_relative_operators(std::string_view str) -> std::vector<RelativeOpera
         sign = (str[i] == '+') ? 1 : -1;
         ++i;
 
-	bool has_digits{};
+        bool has_digits{};
 
         while (i < str.size() && (std::isdigit(static_cast<unsigned char>(str[i])) != 0)) {
-	    has_digits = true;
+            has_digits = true;
             num = (num * 10) + (str[i] - '0');
+            if (num > UINT16_MAX) {
+                range_error("Number in relative operator", std::format("[0,{}]", UINT16_MAX));
+            }
             ++i;
         }
 
         if (!has_digits) {
-            throw std::invalid_argument("ERROR: No number given to relative date operator");
+            throw std::invalid_argument("ERROR: No value given to time operator");
+        }
+
+        if (num > INT_MAX) {
         }
 
         if (i >= str.size()) {
-            throw std::invalid_argument("ERROR: Missing unit in relative date expression");
+            throw std::invalid_argument("ERROR: Missing unit in time expression");
         }
         unit = str[i];
 
-        res.emplace_back(num * sign, std::tolower(unit));
-	++i;
+        res.emplace_back(num * sign, std::tolower(static_cast<unsigned char>(unit)));
+        ++i;
     }
     return res;
 }
-} // namespace
 
-auto parse_date(const std::string &str) -> Lines::Temporal::Date {
+/* Splits time expressions like "1970.01.01+1d" or "12:34:56-56s" to base (before operators) and
+operators */
+auto split_time_expression(const std::string &str) -> TimeExprSplitResult {
+    TimeExprSplitResult res;
+
+    std::size_t first_operator = str.find_first_of("+-");
+    if (first_operator != std::string::npos) {
+        res.base = str.substr(0, first_operator);
+        res.operators = str.substr(first_operator);
+        return res;
+    }
+    res.base = str;
+    return res;
+}
+
+auto parse_date_base(const std::string &str) -> Lines::Temporal::Date {
+    auto lower_str = to_lower_str(str);
+
+    if (lower_str == "today" || lower_str == "t") {
+        return Lines::Temporal::LocalClock::today();
+    }
+
     std::stringstream ss(str);
     int year{};
     uint32_t month{};
@@ -112,40 +146,37 @@ auto parse_date(const std::string &str) -> Lines::Temporal::Date {
 
     return {t_year, t_month, t_day};
 }
+} // namespace
 
-auto valid_relative_date(const std::string &str) -> bool {
-    auto s = to_lower_str(str);
-    return s.starts_with("t+") || s.starts_with("t-") || s.starts_with("today");
-}
-
-// Date parser for "TODAY+1y-1m+1d..." format
-auto parse_relative_date(const std::string &str) -> Lines::Temporal::Date {
-    Lines::Temporal::Date res = Lines::Temporal::LocalClock::today();
-
-    auto tmp = to_lower_str(str);
-
-    if (tmp == "today" || tmp == "t") {
-        return res;
-    }
-
-    if (!valid_relative_date(str)) {
+auto parse_date(const std::string &str) -> Lines::Temporal::Date {
+    static const std::regex date_regex(R"(^(\d{4}\.\d{2}\.\d{2}|today|t)([+-]\d+[ymd])*$)",
+                                       std::regex::icase);
+    if (!std::regex_match(str, date_regex)) {
         throw std::invalid_argument(
-            R"(ERROR: Relative date must start with "TODAY" or "T" (case insensitive))");
+            R"(
+ERROR: Unknown date format.
+Supported date formats:
+
+Absolute:
+  YYYY.MM.DD
+  YYYY.MM.DD[operators...]
+
+Relative:
+  TODAY | T
+  TODAY[operators...]
+
+Operators:
+  +N[ymd]  add time
+  -N[ymd]  subtract time
+ )");
     }
 
-    // Parsing operations after "TODAY" word
-    std::size_t first_operator = str.find_first_of("+-");
+    auto expr = split_time_expression(str);
+    Lines::Temporal::Date res{Lines::Temporal::Days{0}};
 
-    if (first_operator != std::string("today").length() &&
-        first_operator != std::string("t").length()) {
-        throw std::invalid_argument("ERROR: Invalid relative date expression");
-    }
+    res = parse_date_base(expr.base);
 
-    std::string operations = str.substr(first_operator);
-
-    std::vector<RelativeOperator> operators = parse_relative_operators(operations);
-
-    eval_relative_date(res, operators);
+    eval_date_operators(res, parse_time_operators(expr.operators));
 
     return res;
 }
@@ -176,23 +207,6 @@ auto parse_time(const std::string &str) -> Lines::Temporal::Timestamp {
 }
 
 auto parse_timepoint(const std::string &str) -> Lines::Temporal::TimePoint {
-    static const std::regex full_tp_regex(R"(\d{4}\.\d{2}\.\d{2}_\d{2}:\d{2}:\d{2})");
-    static const std::regex date_only_tp_regex(R"(\d{4}\.\d{2}\.\d{2})");
-
-    bool date_only_tp = std::regex_match(str, date_only_tp_regex);
-    bool full_tp = std::regex_match(str, full_tp_regex);
-
-    if (!full_tp && !date_only_tp) {
-        throw std::invalid_argument(
-            "ERROR: Invalid time point format, expected YYYY.MM.DD or YYYY.MM.DD_HH:MM:SS");
-    }
-
-    if (date_only_tp) {
-        return Lines::Temporal::DateTime{parse_date(str),
-                                         Lines::Temporal::Timestamp{Lines::Temporal::Seconds{0}}}
-            .time_point();
-    }
-
     std::size_t middle_divider = str.find('_');
 
     std::string date = str.substr(0, middle_divider);
