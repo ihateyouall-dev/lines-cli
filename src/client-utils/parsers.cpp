@@ -1,13 +1,8 @@
-#include "lines/temporal/clocks.hpp"
-#include "lines/temporal/duration.hpp"
-#include "lines/temporal/timestamp.hpp"
-#include "lines/temporal/ymd.hpp"
 #include <algorithm>
 #include <client-utils/parsers.hpp>
-#include <climits>
+#include <lines/temporal/clocks.hpp>
 #include <cstddef>
 #include <cstdint>
-#include <ctime>
 #include <regex>
 #include <stdexcept>
 #include <string_view>
@@ -23,17 +18,17 @@ auto to_lower_str(std::string str) -> std::string {
     return str;
 }
 
-struct TimeExprSplitResult {
+struct TemporalExprSplitResult {
     std::string base;
     std::string operators;
 };
 
-struct TimeOperator {
+struct TemporalOperator {
     int value;
     char unit;
 };
 
-void eval_date_operators(Lines::Temporal::Date &date, const std::vector<TimeOperator> &ops) {
+void eval_date_operators(Lines::Temporal::Date &date, const std::vector<TemporalOperator> &ops) {
     for (const auto &op : ops) {
         switch (op.unit) {
         case 'y':
@@ -57,7 +52,7 @@ void eval_date_operators(Lines::Temporal::Date &date, const std::vector<TimeOper
     }
 }
 
-void eval_time_operators(Lines::Temporal::Timestamp &ts, const std::vector<TimeOperator> &ops) {
+void eval_time_operators(Lines::Temporal::Timestamp &ts, const std::vector<TemporalOperator> &ops) {
     for (const auto &op : ops) {
         switch (op.unit) {
         case 'h':
@@ -78,20 +73,20 @@ void eval_time_operators(Lines::Temporal::Timestamp &ts, const std::vector<TimeO
     }
 }
 
-// Parse operators after relative time point (e.g +1d+1m-1y... or +1h-1m+1s...)
-auto parse_time_operators(std::string_view str) -> std::vector<TimeOperator> {
-    std::vector<TimeOperator> res;
+// Parse operators after temporal expression base (e.g +1d+1m-1y... or +1h-1m+1s...)
+auto parse_temporal_operators(std::string_view str) -> std::vector<TemporalOperator> {
+    std::vector<TemporalOperator> res;
 
     std::size_t i{};
     while (i < str.size()) {
         int sign{};
-        int num{};
+        uint64_t num{};
         char unit{};
 
         if (str[i] != '+' && str[i] != '-') {
             throw std::invalid_argument(
                 std::format("ERROR: Unknown operator: {}. Only operations "
-                            "permitted with relative time points are + and -",
+                            "permitted with temporal expressions are + and -",
                             str[i]));
         }
         sign = (str[i] == '+') ? 1 : -1;
@@ -103,20 +98,17 @@ auto parse_time_operators(std::string_view str) -> std::vector<TimeOperator> {
             has_digits = true;
             num = (num * 10) + (str[i] - '0');
             if (num > UINT16_MAX) {
-                range_error("Number in relative operator", std::format("[0,{}]", UINT16_MAX));
+                range_error("Value in operator", std::format("[0,{}]", UINT16_MAX));
             }
             ++i;
         }
 
         if (!has_digits) {
-            throw std::invalid_argument("ERROR: No value given to time operator");
-        }
-
-        if (num > INT_MAX) {
+            throw std::invalid_argument("ERROR: No value given to temporal operator");
         }
 
         if (i >= str.size()) {
-            throw std::invalid_argument("ERROR: Missing unit in time expression");
+            throw std::invalid_argument("ERROR: Missing unit in temporal expression");
         }
         unit = str[i];
 
@@ -126,10 +118,10 @@ auto parse_time_operators(std::string_view str) -> std::vector<TimeOperator> {
     return res;
 }
 
-/* Splits time expressions like "1970.01.01+1d" or "12:34:56-56s" to base (before operators) and
+/* Splits temporal expressions like "1970.01.01+1d" or "12:34:56-56s" to base (before operators) and
 operators */
-auto split_time_expression(const std::string &str) -> TimeExprSplitResult {
-    TimeExprSplitResult res;
+auto split_temporal_expression(const std::string &str) -> TemporalExprSplitResult {
+    TemporalExprSplitResult res;
 
     std::size_t first_operator = str.find_first_of("+-");
     if (first_operator != std::string::npos) {
@@ -224,12 +216,12 @@ Operators:
   -N[ymwd]  subtract time)");
     }
 
-    auto expr = split_time_expression(str);
+    auto expr = split_temporal_expression(str);
     Lines::Temporal::Date res{Lines::Temporal::Days{0}};
 
     res = parse_date_base(expr.base);
 
-    eval_date_operators(res, parse_time_operators(expr.operators));
+    eval_date_operators(res, parse_temporal_operators(expr.operators));
 
     return res;
 }
@@ -258,10 +250,10 @@ Operators:
   -N[hms]  subtract time)");
     }
 
-    auto expr = split_time_expression(str);
+    auto expr = split_temporal_expression(str);
     Lines::Temporal::Timestamp res = parse_time_base(expr.base);
 
-    eval_time_operators(res, parse_time_operators(expr.operators));
+    eval_time_operators(res, parse_temporal_operators(expr.operators));
 
     return res;
 }
