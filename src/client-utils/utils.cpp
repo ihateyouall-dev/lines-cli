@@ -21,6 +21,11 @@ auto timepoint_str(const Lines::Temporal::TimePoint &tp) -> std::string {
     return std::format("{} {}", date_str(dt.date()), dt.time().hh_mm_ss());
 }
 
+auto timepoint_str_s(const Lines::Temporal::TimePoint &tp) -> std::string {
+    Lines::Temporal::DateTime dt(tp);
+    return std::format("{}_{}", date_str(dt.date()), dt.time().hh_mm_ss());
+}
+
 auto tags_str(const Lines::Task &task) -> std::string {
     std::string result;
     for (const auto &tag : task.tags()) {
@@ -44,8 +49,7 @@ auto task_str_unfolded(const Lines::Task &task) -> std::string {
         result += std::format("Tags:{}\n", tags_str(task));
     }
     if (task.deadline()) {
-        result +=
-            std::format("Date: {}\n", date_str(Lines::Temporal::DateTime{*task.deadline()}.date()));
+        result += std::format("Deadline: {}\n", timepoint_str(*task.deadline()));
     }
     result += '\n' + completion_sign(task);
     return result;

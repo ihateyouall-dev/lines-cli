@@ -1,6 +1,5 @@
 #pragma once
 
-#include "lines/temporal/date.hpp"
 #include "lines/temporal/timepoint.hpp"
 #include <vector>
 

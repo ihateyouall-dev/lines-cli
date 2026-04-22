@@ -11,7 +11,7 @@ auto Lines::TasksJSON::to_json(const Lines::Task &task) -> nlohmann::json {
     result["title"] = task.title();
     result["description"] = task.description().value_or("");
     if (task.deadline()) {
-        result["deadline"] = timepoint_str(*task.deadline());
+        result["deadline"] = timepoint_str_s(*task.deadline());
     }
 
     for (const auto &tag : task.tags()) {

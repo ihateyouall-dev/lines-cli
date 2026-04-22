@@ -171,6 +171,8 @@ TEST(Parsers, TimePoint) {
               (DateTime{LocalClock::today() + Days{1}, LocalClock::since_midnight() + Hours{2}}
                    .time_point()));
 
+    EXPECT_THROW(parse_timepoint("1970.01.01 23:59:59"), std::invalid_argument);
+
     EXPECT_THROW(parse_timepoint("garbage"), std::invalid_argument);
     EXPECT_THROW(parse_timepoint(""), std::invalid_argument);
 }

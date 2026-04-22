@@ -11,6 +11,7 @@ auto confirm() -> bool;
 auto date_str(const Lines::Temporal::Date &date) -> std::string;
 
 auto timepoint_str(const Lines::Temporal::TimePoint &tp) -> std::string;
+auto timepoint_str_s(const Lines::Temporal::TimePoint &tp) -> std::string;
 
 auto tags_str(const Lines::Task &task) -> std::string;
 
