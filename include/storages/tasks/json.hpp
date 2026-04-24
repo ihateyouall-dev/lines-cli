@@ -1,9 +1,10 @@
 #pragma once
 
+#include "lines/tasks/task.hpp"
+#include "nlohmann/json_fwd.hpp"
+
 #include <cstddef>
 #include <filesystem>
-#include <lines/tasks/task.hpp>
-#include <nlohmann/json.hpp>
 
 namespace Lines {
 namespace TasksJSON {

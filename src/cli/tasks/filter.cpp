@@ -1,6 +1,8 @@
+#include "cli/tasks/filter.hpp"
+
+#include "storages/tasks/json.hpp"
+
 #include <algorithm>
-#include <cli/tasks/filter.hpp>
-#include <storages/tasks/json.hpp>
 
 auto Lines::has_tag(const Task &task, const std::string &tag) -> bool {
     return std::ranges::find(task.tags(), tag) != task.tags().end();

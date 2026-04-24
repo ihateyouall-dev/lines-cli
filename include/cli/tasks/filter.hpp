@@ -1,6 +1,7 @@
 #pragma once
 
 #include "lines/temporal/timepoint.hpp"
+
 #include <vector>
 
 namespace Lines {

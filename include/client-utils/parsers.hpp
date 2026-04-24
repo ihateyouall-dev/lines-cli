@@ -1,8 +1,10 @@
 #pragma once
 
+#include "lines/temporal/date.hpp"
+#include "lines/temporal/timepoint.hpp"
+#include "lines/temporal/timestamp.hpp"
+
 #include <string>
-#include <lines/temporal/datetime.hpp>
-#include <lines/temporal/timepoint.hpp>
 
 void range_error(std::string_view prefix, std::string_view range_str);
 

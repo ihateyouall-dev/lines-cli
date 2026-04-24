@@ -1,12 +1,15 @@
+#include "cli/tasks/tasks.hpp"
+
 #include "CLI/CLI.hpp"
+#include "client-utils/parsers.hpp"
+#include "client-utils/utils.hpp"
 #include "lines/tasks/task.hpp"
-#include "lines/temporal/datetime.hpp"
+#include "lines/temporal/clocks.hpp"
+
 #include <cctype>
-#include <cli/tasks/tasks.hpp>
-#include <client-utils/parsers.hpp>
-#include <client-utils/utils.hpp>
 #include <cstddef>
 #include <format>
+#include <ranges>
 #include <stdexcept>
 #include <string>
 
@@ -40,7 +43,8 @@ void Tasks::addition_init(CLI::App &app) {
 
 void Tasks::editing_init(CLI::App &app) {
     auto *edit = app.add_subcommand("edit", "Edit task");
-    edit->add_option("-i,--id", _options.tasks_filter_rule.id, "Edit task with given ID")->required();
+    edit->add_option("-i,--id", _options.tasks_filter_rule.id, "Edit task with given ID")
+        ->required();
     edit->add_option("--title", _options.title, "Give task a new title");
 
     add_task_options(*edit, "Give task a new",
@@ -88,7 +92,8 @@ auto Tasks::dirty() const -> bool { return _dirty; };
 
 void Tasks::add_filter_options(CLI::App &app, const std::string_view &desc_prefix) {
     auto *filters = app.add_option_group("filters");
-    filters->add_option("-i,--id", _options.tasks_filter_rule.id, std::format("{} task with given id", desc_prefix));
+    filters->add_option("-i,--id", _options.tasks_filter_rule.id,
+                        std::format("{} task with given id", desc_prefix));
     // Tag specific filters
     filters->add_option(
         "-T,--any-tag", _options.tasks_filter_rule.any_tag,
@@ -110,8 +115,7 @@ void Tasks::add_filter_options(CLI::App &app, const std::string_view &desc_prefi
     auto active_callback = [this](bool b) { // NOLINT
         return [this, b]() -> void {
             _options.tasks_filter_rule.active_bool = b;
-            _options.tasks_filter_rule.active_deadline =
-                Lines::Temporal::DateTime{today()}.time_point();
+            _options.tasks_filter_rule.active_deadline = Lines::Temporal::LocalClock::now();
         };
     };
     filters->add_flag_callback("--ac,--active", active_callback(true),
@@ -179,7 +183,7 @@ void Tasks::editing_callback() {
 
 void Tasks::showing_callback() {
     if (_options.tasks_filter_rule.id) {
-	--*_options.tasks_filter_rule.id;
+        --*_options.tasks_filter_rule.id;
     }
     auto tasks = filter(_storage, _options.tasks_filter_rule);
     if (tasks.empty()) {
@@ -198,7 +202,7 @@ void Tasks::showing_callback() {
 
 void Tasks::deletion_callback() {
     if (_options.tasks_filter_rule.id) {
-	--*_options.tasks_filter_rule.id;
+        --*_options.tasks_filter_rule.id;
     }
     auto tasks = filter(_storage, _options.tasks_filter_rule);
     if (tasks.empty()) {
@@ -230,7 +234,7 @@ void Tasks::deletion_callback() {
 
 void Tasks::complete_callback() {
     if (_options.tasks_filter_rule.id) {
-	--*_options.tasks_filter_rule.id;
+        --*_options.tasks_filter_rule.id;
     }
     auto tasks = filter(_storage, _options.tasks_filter_rule);
     if (tasks.empty()) {
@@ -256,7 +260,7 @@ void Tasks::complete_callback() {
 
 void Tasks::uncomplete_callback() {
     if (_options.tasks_filter_rule.id) {
-	--*_options.tasks_filter_rule.id;
+        --*_options.tasks_filter_rule.id;
     }
     auto tasks = filter(_storage, _options.tasks_filter_rule);
     if (tasks.empty()) {

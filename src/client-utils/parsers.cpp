@@ -1,8 +1,11 @@
+#include "client-utils/parsers.hpp"
+
+#include "lines/temporal/clocks.hpp"
+#include "lines/temporal/datetime.hpp"
+
 #include <algorithm>
-#include <client-utils/parsers.hpp>
 #include <cstddef>
 #include <cstdint>
-#include <lines/temporal/clocks.hpp>
 #include <regex>
 #include <stdexcept>
 #include <string_view>
@@ -265,7 +268,8 @@ auto parse_timepoint(const std::string &str) -> Lines::Temporal::TimePoint {
 
     if (middle_divider == std::string::npos) {
         return Lines::Temporal::DateTime{parse_date(date),
-                                         Lines::Temporal::Timestamp{Lines::Temporal::Seconds{-1}}}.time_point();
+                                         Lines::Temporal::Timestamp{Lines::Temporal::Seconds{-1}}}
+            .time_point();
     }
 
     std::string time = str.substr(middle_divider + 1);

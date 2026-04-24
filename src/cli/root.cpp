@@ -1,10 +1,12 @@
-#include <cli/root.hpp>
-#include <lines/version.h>
+#include "cli/root.hpp"
+
+#include "lines/version.h"
 
 Root::Root() {
-    add_flag_callback("-v,--version", [] { std::cout << "Lines CLI " << LINES_VERSION << '\n'; });
+    add_flag_callback("-v,--version",
+                      []() -> void { std::cout << "Lines CLI " << LINES_VERSION << '\n'; });
     _tasks.init(*this);
-    this->callback([this] {
+    this->callback([this]() -> void {
         if (_tasks.dirty()) {
             _tasks.save();
         }
