@@ -40,11 +40,13 @@ target_sources(client_utils PRIVATE ${CLIENT_UTILS_SOURCES})
 
 target_include_directories(cli_root PUBLIC ${PROJECT_SOURCE_DIR}/include)
 target_include_directories(cli_tasks PUBLIC ${PROJECT_SOURCE_DIR}/include)
-target_include_directories(tasks_json_storage PUBLIC ${PROJECT_SOURCE_DIR}/include)
+target_include_directories(tasks_json_storage PUBLIC
+  ${PROJECT_SOURCE_DIR}/include)
 target_include_directories(storages_utils PUBLIC ${PROJECT_SOURCE_DIR}/include)
 target_include_directories(client_utils PUBLIC ${PROJECT_SOURCE_DIR}/include)
 
-target_link_libraries(cli_tasks PUBLIC CLI11 Lines::Tasks tasks_json_storage client_utils)
+target_link_libraries(cli_tasks PUBLIC
+  CLI11 Lines::Tasks tasks_json_storage client_utils)
 target_link_libraries(cli_root PUBLIC CLI11 Lines::Lines cli_tasks)
 target_link_libraries(tasks_json_storage PUBLIC
   nlohmann_json::nlohmann_json
