@@ -10,13 +10,13 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        preset: [release-gcc, release-clang]
+        preset: [debug-gcc, debug-clang]
 
     steps:
       - uses: actions/checkout@v4
 
       - name: Install libc++
-        if: matrix.preset == 'release-clang'
+        if: matrix.preset == 'debug-clang'
         run: | 
           sudo apt-get update
           sudo apt-get install -y libc++-dev libc++abi-dev
@@ -36,13 +36,13 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Configure
-        run: cmake --preset release-clang
+        run: cmake --preset debug-clang
 
       - name: Build
-        run: cmake --build --preset release-clang
+        run: cmake --build --preset debug-clang
 
       - name: Test
-        run: ctest --preset release-clang
+        run: ctest --preset debug-clang
   Windows:
     runs-on: windows-latest
 
@@ -53,10 +53,10 @@ jobs:
         uses: ilammy/msvc-dev-cmd@0b201ec74fa43914dc39ae48a89fd1d8cb592756
 
       - name: Configure
-        run: cmake --preset release-msvc
+        run: cmake --preset debug-msvc
 
       - name: Build
-        run: cmake --build --preset release-msvc
+        run: cmake --build --preset debug-msvc
 
       - name: Test
-        run: ctest --preset release-msvc
+        run: ctest --preset debug-msvc
