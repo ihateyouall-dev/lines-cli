@@ -1,7 +1,7 @@
 #pragma once
 
 #include "lines/tasks/task.hpp"
-#include "nlohmann/json_fwd.hpp"
+#include "nlohmann/json.hpp"
 
 #include <cstddef>
 #include <filesystem>

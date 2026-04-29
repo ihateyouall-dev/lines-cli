@@ -1,27 +1,15 @@
 include(FetchContent)
 
 FetchContent_Declare(
-  CLI11
-  GIT_REPOSITORY https://github.com/CLIUtils/CLI11
-  GIT_TAG v2.6.1
-)
-
-FetchContent_Declare(
   Lines
   GIT_REPOSITORY https://github.com/ihateyouall-dev/lines-core
   GIT_TAG main
 )
 
-FetchContent_Declare(
-  nlohmann_json
-  GIT_REPOSITORY https://github.com/nlohmann/json
-  GIT_TAG v3.12.0
-)
-
-FetchContent_MakeAvailable(CLI11)
 FetchContent_MakeAvailable(Lines)
-FetchContent_MakeAvailable(nlohmann_json)
 
+add_library(CLI11 INTERFACE)
+add_library(nlohmann_json INTERFACE)
 add_library(cli_root)
 add_library(tasks_json_storage)
 add_library(storages_utils)
@@ -38,18 +26,22 @@ file(GLOB CLIENT_UTILS_SOURCES "client-utils/*.cpp")
 target_sources(storages_utils PRIVATE ${STORAGES_UTILS_SOURCES})
 target_sources(client_utils PRIVATE ${CLIENT_UTILS_SOURCES})
 
-target_include_directories(cli_root PUBLIC ${PROJECT_SOURCE_DIR}/include)
-target_include_directories(cli_tasks PUBLIC ${PROJECT_SOURCE_DIR}/include)
+target_include_directories(CLI11 INTERFACE
+  $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/third-party/CLI11/include>)
+target_include_directories(nlohmann_json INTERFACE
+  $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/third-party/nlohmann-json/include>)
+target_include_directories(cli_root PUBLIC ${PROJECT_SOURCE_DIR}/src)
+target_include_directories(cli_tasks PUBLIC ${PROJECT_SOURCE_DIR}/src)
 target_include_directories(tasks_json_storage PUBLIC
-  ${PROJECT_SOURCE_DIR}/include)
-target_include_directories(storages_utils PUBLIC ${PROJECT_SOURCE_DIR}/include)
-target_include_directories(client_utils PUBLIC ${PROJECT_SOURCE_DIR}/include)
+  ${PROJECT_SOURCE_DIR}/src)
+target_include_directories(storages_utils PUBLIC ${PROJECT_SOURCE_DIR}/src)
+target_include_directories(client_utils PUBLIC ${PROJECT_SOURCE_DIR}/src)
 
 target_link_libraries(cli_tasks PUBLIC
   CLI11 Lines::Tasks tasks_json_storage client_utils)
 target_link_libraries(cli_root PUBLIC CLI11 Lines::Lines cli_tasks)
 target_link_libraries(tasks_json_storage PUBLIC
-  nlohmann_json::nlohmann_json
+  nlohmann_json
   Lines::Tasks
   storages_utils
   client_utils)
