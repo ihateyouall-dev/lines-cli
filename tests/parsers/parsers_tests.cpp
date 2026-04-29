@@ -24,6 +24,9 @@ TEST(Parsers, RelativeDate) {
     EXPECT_EQ(parse_date("TODAY"), LocalClock::today());
     EXPECT_EQ(parse_date("tOdAy"), LocalClock::today());
 
+    EXPECT_EQ(parse_date("TOMORROW"), LocalClock::today() + Days{1});
+    EXPECT_EQ(parse_date("YESTERDAY"), LocalClock::today() - Days{1});
+
     EXPECT_THROW(parse_date("TOD"), std::invalid_argument);
 }
 

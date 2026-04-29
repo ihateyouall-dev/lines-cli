@@ -9,7 +9,9 @@
 #include <cstdint>
 #include <regex>
 #include <stdexcept>
+#include <string>
 #include <string_view>
+#include <unordered_map>
 
 void throw_range_error(std::string_view prefix, std::string_view range_str) {
     throw std::out_of_range(std::format("ERROR: {} can be only in range {}", prefix, range_str));
@@ -138,10 +140,19 @@ auto split_temporal_expression(const std::string &str) -> TemporalExprSplitResul
 }
 
 auto parse_date_base(const std::string &str) -> Lines::Temporal::Date {
-    auto lower_str = to_lower_str(str);
+    auto base = to_lower_str(str);
 
-    if (lower_str == "today" || lower_str == "t") {
-        return Lines::Temporal::LocalClock::today();
+    using namespace Lines::Temporal;
+    using DateBaseFunc = Date (*)();
+    static const std::unordered_map<std::string_view, DateBaseFunc> base_funcs{
+        {"today", []() -> Date { return LocalClock::today(); }},
+        {"tomorrow", []() -> Date { return LocalClock::today() + Days{1}; }},
+        {"yesterday", []() -> Date { return LocalClock::today() - Days{1}; }}};
+
+    // If base has function in base_funcs, it returns function value, otherwise it parses base as
+    // date in format YYYY.MM.DD
+    if (auto it = base_funcs.find(base); it != base_funcs.end()) {
+        return it->second();
     }
 
     std::stringstream ss(str);
@@ -152,9 +163,9 @@ auto parse_date_base(const std::string &str) -> Lines::Temporal::Date {
 
     ss >> year >> divider >> month >> divider >> day;
 
-    Lines::Temporal::Year t_year{year};
-    Lines::Temporal::Month t_month{month};
-    Lines::Temporal::Day t_day{day};
+    Year t_year{year};
+    Month t_month{month};
+    Day t_day{day};
 
     assert(t_year.ok());
     if (!t_month.ok()) {
@@ -200,8 +211,8 @@ auto parse_time_base(const std::string &str) -> Lines::Temporal::Timestamp {
 } // namespace
 
 auto parse_date(const std::string &str) -> Lines::Temporal::Date {
-    static const std::regex date_regex(R"(^(\d{4}\.\d{2}\.\d{2}|today)([+-]\d+[ymwd])*$)",
-                                       std::regex::icase);
+    static const std::regex date_regex(
+        R"(^(\d{4}\.\d{2}\.\d{2}|today|tomorrow|yesterday)([+-]\d+[ymwd])*$)", std::regex::icase);
     if (!std::regex_match(str, date_regex)) {
         throw std::invalid_argument(
             R"(ERROR: Unknown date format.
