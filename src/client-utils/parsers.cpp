@@ -11,7 +11,7 @@
 #include <stdexcept>
 #include <string_view>
 
-void range_error(std::string_view prefix, std::string_view range_str) {
+void throw_range_error(std::string_view prefix, std::string_view range_str) {
     throw std::out_of_range(std::format("ERROR: {} can be only in range {}", prefix, range_str));
 }
 
@@ -102,7 +102,7 @@ auto parse_temporal_operators(std::string_view str) -> std::vector<TemporalOpera
             has_digits = true;
             num = (num * 10) + (str[i] - '0');
             if (num > UINT16_MAX) {
-                range_error("Value in operator", std::format("[0,{}]", UINT16_MAX));
+                throw_range_error("Value in operator", std::format("[0,{}]", UINT16_MAX));
             }
             ++i;
         }
@@ -158,10 +158,10 @@ auto parse_date_base(const std::string &str) -> Lines::Temporal::Date {
 
     assert(t_year.ok());
     if (!t_month.ok()) {
-        range_error("Month", "[1;12]");
+        throw_range_error("Month", "[1;12]");
     }
     if (!t_day.ok()) {
-        range_error("Day", "[1;31]");
+        throw_range_error("Day", "[1;31]");
     }
 
     return {t_year, t_month, t_day};
@@ -183,15 +183,15 @@ auto parse_time_base(const std::string &str) -> Lines::Temporal::Timestamp {
     ss >> hour >> divider >> minute >> divider >> second;
 
     if (hour < 0 || hour > 23) {
-        range_error("Hour", "[0;23]");
+        throw_range_error("Hour", "[0;23]");
     }
 
     if (minute < 0 || minute > 59) {
-        range_error("Minute", "[0;59]");
+        throw_range_error("Minute", "[0;59]");
     }
 
     if (second < 0 || second > 59) {
-        range_error("Second", "[0;59]");
+        throw_range_error("Second", "[0;59]");
     }
 
     return {Lines::Temporal::Hours{hour}, Lines::Temporal::Minutes{minute},

@@ -6,7 +6,7 @@
 
 #include <string>
 
-void range_error(std::string_view prefix, std::string_view range_str);
+void throw_range_error(std::string_view prefix, std::string_view range_str);
 
 auto parse_date(const std::string &str) -> Lines::Temporal::Date;
 
