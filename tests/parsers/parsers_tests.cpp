@@ -11,11 +11,11 @@
 using namespace Lines::Temporal;
 
 TEST(Parsers, Date) {
-    EXPECT_EQ(parse_date("1970.01.01"), Date{Days{0}});
-    EXPECT_EQ(parse_date("1969.12.31"), Date{Days{-1}});
+    EXPECT_EQ(parse_date("1970/01/01"), Date{Days{0}});
+    EXPECT_EQ(parse_date("1969/12/31"), Date{Days{-1}});
 
-    EXPECT_THROW(parse_date("1970.13.01"), std::out_of_range);
-    EXPECT_THROW(parse_date("1970.01.32"), std::out_of_range);
+    EXPECT_THROW(parse_date("1970/13/01"), std::out_of_range);
+    EXPECT_THROW(parse_date("1970/01/32"), std::out_of_range);
 
     EXPECT_THROW(parse_date(""), std::invalid_argument);
 }
@@ -31,35 +31,35 @@ TEST(Parsers, RelativeDate) {
 }
 
 TEST(Parsers, DateOperators) {
-    EXPECT_EQ(parse_date("1970.01.01+1d"), Date{Days{1}});
-    EXPECT_EQ(parse_date("1970.01.01+2d"), Date{Days{2}});
-    EXPECT_EQ(parse_date("1970.01.02+1d"), Date{Days{2}});
+    EXPECT_EQ(parse_date("1970/01/01+1d"), Date{Days{1}});
+    EXPECT_EQ(parse_date("1970/01/01+2d"), Date{Days{2}});
+    EXPECT_EQ(parse_date("1970/01/02+1d"), Date{Days{2}});
 
-    EXPECT_EQ(parse_date("1970.01.02-1d"), Date{Days{0}});
+    EXPECT_EQ(parse_date("1970/01/02-1d"), Date{Days{0}});
 
-    EXPECT_EQ(parse_date("1970.01.01+1d-2m+3y-4w"),
+    EXPECT_EQ(parse_date("1970/01/01+1d-2m+3y-4w"),
               Date{Days{0}} + Days{1} - Months{2} + Years{3} - Weeks{4});
 
-    EXPECT_EQ(parse_date("1970.01.01+123d"), Date{Days{0}} + Days{123});
+    EXPECT_EQ(parse_date("1970/01/01+123d"), Date{Days{0}} + Days{123});
 
-    EXPECT_EQ(parse_date("1970.01.01+0d-0m+0y-0w"), Date{Days{0}});
+    EXPECT_EQ(parse_date("1970/01/01+0d-0m+0y-0w"), Date{Days{0}});
 
-    EXPECT_THROW(parse_date("1970.01.01/1d"), std::invalid_argument);
-    EXPECT_THROW(parse_date("1970.01+1d"), std::invalid_argument);
-    EXPECT_THROW(parse_date("1970.01.01.01+1d"), std::invalid_argument);
+    EXPECT_THROW(parse_date("1970/01/01/1d"), std::invalid_argument);
+    EXPECT_THROW(parse_date("1970/01+1d"), std::invalid_argument);
+    EXPECT_THROW(parse_date("1970/01/01/01+1d"), std::invalid_argument);
 
-    EXPECT_THROW(parse_date("1970.01.01+1dd"), std::invalid_argument);
-    EXPECT_THROW(parse_date("1970.01.01++1d"), std::invalid_argument);
-    EXPECT_THROW(parse_date("1970.01.01+d"), std::invalid_argument);
-    EXPECT_THROW(parse_date("1970.01.01+1"), std::invalid_argument);
-    EXPECT_THROW(parse_date("1970.01.01+1-1d"), std::invalid_argument);
+    EXPECT_THROW(parse_date("1970/01/01+1dd"), std::invalid_argument);
+    EXPECT_THROW(parse_date("1970/01/01++1d"), std::invalid_argument);
+    EXPECT_THROW(parse_date("1970/01/01+d"), std::invalid_argument);
+    EXPECT_THROW(parse_date("1970/01/01+1"), std::invalid_argument);
+    EXPECT_THROW(parse_date("1970/01/01+1-1d"), std::invalid_argument);
 
-    EXPECT_THROW(parse_date("1970.01.01+1h-1m+1s"), std::invalid_argument);
+    EXPECT_THROW(parse_date("1970/01/01+1h-1m+1s"), std::invalid_argument);
 
-    EXPECT_THROW(parse_date("1970.01.01abcgarbageetc"), std::invalid_argument);
+    EXPECT_THROW(parse_date("1970/01/01abcgarbageetc"), std::invalid_argument);
 
-    EXPECT_NO_THROW(parse_date("1970.01.01+65535d"));
-    EXPECT_THROW(parse_date("1970.01.01+65536d"), std::out_of_range);
+    EXPECT_NO_THROW(parse_date("1970/01/01+65535d"));
+    EXPECT_THROW(parse_date("1970/01/01+65536d"), std::out_of_range);
 }
 
 TEST(Parsers, RelativeDateOperators) {
@@ -164,10 +164,10 @@ TEST(Parsers, RelativeTimeOperators) {
 }
 
 TEST(Parsers, TimePoint) {
-    EXPECT_EQ(parse_timepoint("1970.01.01"), TimePoint{Seconds{86399}});
-    EXPECT_EQ(parse_timepoint("1970.01.01_23:59:59"), TimePoint{Seconds{86399}});
-    EXPECT_EQ(parse_timepoint("1970.01.01_01:00"), TimePoint{Seconds{3600}});
-    EXPECT_EQ(parse_timepoint("1970.01.01+1d_00:00+2h"), TimePoint{Seconds{93600}});
+    EXPECT_EQ(parse_timepoint("1970/01/01"), TimePoint{Seconds{86399}});
+    EXPECT_EQ(parse_timepoint("1970/01/01_23:59:59"), TimePoint{Seconds{86399}});
+    EXPECT_EQ(parse_timepoint("1970/01/01_01:00"), TimePoint{Seconds{3600}});
+    EXPECT_EQ(parse_timepoint("1970/01/01+1d_00:00+2h"), TimePoint{Seconds{93600}});
 
     EXPECT_EQ(parse_timepoint("TODAY_NOW"),
               (DateTime{LocalClock::today(), LocalClock::since_midnight()}.time_point()));
@@ -176,7 +176,7 @@ TEST(Parsers, TimePoint) {
               (DateTime{LocalClock::today() + Days{1}, LocalClock::since_midnight() + Hours{2}}
                    .time_point()));
 
-    EXPECT_THROW(parse_timepoint("1970.01.01 23:59:59"), std::invalid_argument);
+    EXPECT_THROW(parse_timepoint("1970/01/01 23:59:59"), std::invalid_argument);
 
     EXPECT_THROW(parse_timepoint("garbage"), std::invalid_argument);
     EXPECT_THROW(parse_timepoint(""), std::invalid_argument);

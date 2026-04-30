@@ -212,15 +212,15 @@ auto parse_time_base(const std::string &str) -> Lines::Temporal::Timestamp {
 
 auto parse_date(const std::string &str) -> Lines::Temporal::Date {
     static const std::regex date_regex(
-        R"(^(\d{4}\.\d{2}\.\d{2}|today|tomorrow|yesterday)([+-]\d+[ymwd])*$)", std::regex::icase);
+        R"(^(\d{4}/\d{2}/\d{2}|today|tomorrow|yesterday)([+-]\d+[ymwd])*$)", std::regex::icase);
     if (!std::regex_match(str, date_regex)) {
         throw std::invalid_argument(
             R"(ERROR: Unknown date format.
 Supported date formats:
 
 Absolute:
-  YYYY.MM.DD
-  YYYY.MM.DD[operators...]
+  YYYY/MM/DD
+  YYYY/MM/DD[operators...]
 
 Relative:
   TODAY

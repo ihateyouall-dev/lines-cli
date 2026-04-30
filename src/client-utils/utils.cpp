@@ -15,7 +15,7 @@ auto confirm() -> bool {
 }
 
 auto date_str(const Lines::Temporal::Date &date) -> std::string {
-    return std::format("{:04}.{:02}.{:02}", int(date.year()), unsigned(date.month()),
+    return std::format("{:04}/{:02}/{:02}", int(date.year()), unsigned(date.month()),
                        unsigned(date.day()));
 }
 
