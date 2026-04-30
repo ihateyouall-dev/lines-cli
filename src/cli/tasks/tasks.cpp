@@ -36,7 +36,7 @@ void Tasks::showing_init(CLI::App &app) {
 void Tasks::addition_init(CLI::App &app) {
     auto *add = app.add_subcommand("add", "Add the task");
     add->add_option("title", _options.title, "Give task a title")->required();
-    add_task_options(*add, "Give task a ", "YYYY.MM.DD_[HH:MM[:SS]]");
+    add_task_options(*add, "Give task a");
 
     add->callback([this]() -> void { addition_callback(); });
 }
@@ -48,7 +48,8 @@ void Tasks::editing_init(CLI::App &app) {
     edit->add_option("--title", _options.title, "Give task a new title");
 
     add_task_options(*edit, "Give task a new",
-                     "YYYY.MM.DD_[HH:MM[:SS]], Enter \"0\" to disable deadline");
+                     TaskOptionsFormats{.timepoint_format = timepoint_format,
+                                        .disabling_annot = ". Enter \'0\' to disable it"});
 
     edit->callback([this]() -> void { editing_callback(); });
 }
@@ -285,11 +286,16 @@ void Tasks::uncomplete_callback() {
 }
 
 void Tasks::add_task_options(CLI::App &app, std::string_view desc_prefix, // NOLINT
-                             std::string_view format) {
+                             const TaskOptionsFormats &formats) {
     app.add_option("-d,--description", _options.description,
                    std::format("{} description", desc_prefix));
     app.add_option("-t,--tags", _options.tags, std::format("{} tags", desc_prefix));
 
     app.add_option("-D,--deadline", _options.deadline,
-                   std::format("{} planned deadline (format: {})", desc_prefix, format));
+                   std::format("{} planned deadline. Format: {}{}", desc_prefix,
+                               formats.timepoint_format, formats.disabling_annot));
+    app.add_option("-R,--repeat", _options.repeat_rule,
+                   std::format("{} repeat rule{}", desc_prefix, formats.disabling_annot));
+    app.add_option("--repeat-end", _options.repeat_end,
+                   std::format("{} end of repeat{}", desc_prefix, formats.disabling_annot));
 }
