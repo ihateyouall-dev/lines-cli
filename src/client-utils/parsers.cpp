@@ -1,7 +1,13 @@
 #include "client-utils/parsers.hpp"
 
+#include "lines/detail/macro.h"
+#include "lines/tasks/task_repeat.hpp"
 #include "lines/temporal/clocks.hpp"
+#include "lines/temporal/date.hpp"
 #include "lines/temporal/datetime.hpp"
+#include "lines/temporal/duration.hpp"
+#include "lines/temporal/timepoint.hpp"
+#include "lines/temporal/ymd.hpp"
 
 #include <algorithm>
 #include <cassert>
@@ -12,6 +18,7 @@
 #include <string>
 #include <string_view>
 #include <unordered_map>
+#include <vector>
 
 void throw_range_error(std::string_view prefix, std::string_view range_str) {
     throw std::out_of_range(std::format("ERROR: {} can be only in range {}", prefix, range_str));
@@ -124,7 +131,7 @@ auto parse_temporal_operators(std::string_view str) -> std::vector<TemporalOpera
     return res;
 }
 
-/* Splits temporal expressions like "1970.01.01+1d" or "12:34:56-56s" to base (before operators) and
+/* Splits temporal expressions like "1970/01/01+1d" or "12:34:56-56s" to base (before operators) and
 operators */
 auto split_temporal_expression(const std::string &str) -> TemporalExprSplitResult {
     TemporalExprSplitResult res;
@@ -150,7 +157,7 @@ auto parse_date_base(const std::string &str) -> Lines::Temporal::Date {
         {"yesterday", []() -> Date { return LocalClock::today() - Days{1}; }}};
 
     // If base has function in base_funcs, it returns function value, otherwise it parses base as
-    // date in format YYYY.MM.DD
+    // date in format YYYY/MM/DD
     if (auto it = base_funcs.find(base); it != base_funcs.end()) {
         return it->second();
     }
@@ -208,7 +215,144 @@ auto parse_time_base(const std::string &str) -> Lines::Temporal::Timestamp {
     return {Lines::Temporal::Hours{hour}, Lines::Temporal::Minutes{minute},
             Lines::Temporal::Seconds{second}};
 }
+
+auto parse_repeat_interval(std::size_t val, std::string unit) -> Lines::Temporal::Seconds {
+    using namespace Lines::Temporal;
+
+    const auto v = static_cast<int64_t>(val);
+
+    unit = to_lower_str(unit);
+
+    if (unit == "s") {
+        return Seconds{v};
+    }
+    if (unit == "m") {
+        return duration_cast<Seconds>(Minutes{v});
+    }
+    if (unit == "h") {
+        return duration_cast<Seconds>(Hours{v});
+    }
+    if (unit == "d") {
+        return duration_cast<Seconds>(Days{v});
+    }
+    if (unit == "w") {
+        return duration_cast<Seconds>(Weeks{v});
+    }
+    if (unit == "mo") {
+        return duration_cast<Seconds>(Months{v});
+    }
+    if (unit == "y") {
+        return duration_cast<Seconds>(Years{v});
+    }
+
+    throw std::invalid_argument(R"(ERROR: Invalid repeat unit
+Expected units:
+s - seconds
+m - minutes
+h - hours
+d - days
+w - weeks
+mo - months
+y - years)");
+}
+
+auto parse_weekday(std::string_view str) -> Lines::Temporal::Weekday {
+    if (str == "mon") {
+        return Lines::Temporal::Weekday::Monday;
+    }
+    if (str == "tue") {
+        return Lines::Temporal::Weekday::Tuesday;
+    }
+    if (str == "wed") {
+        return Lines::Temporal::Weekday::Wednesday;
+    }
+    if (str == "thu") {
+        return Lines::Temporal::Weekday::Thursday;
+    }
+    if (str == "fri") {
+        return Lines::Temporal::Weekday::Friday;
+    }
+    if (str == "sat") {
+        return Lines::Temporal::Weekday::Saturday;
+    }
+    if (str == "sun") {
+        return Lines::Temporal::Weekday::Sunday;
+    }
+    LINES_UNREACHABLE();
+}
+
+auto parse_repeat_weekday(std::string_view str) -> std::vector<Lines::Temporal::Weekday> {
+    auto point = str.find('.');
+    if (point == std::string_view::npos) {
+        return {parse_weekday(str)};
+    }
+    if (str.size() != 7 || str[3] != '.') {
+        throw std::invalid_argument(R"(ERROR: Invalid weekday format.
+Examples:
+mon
+wed.sat
+
+See "lines-cli help repeat" for more info)");
+    }
+    std::vector<Lines::Temporal::Weekday> res;
+    auto begin = parse_weekday(str.substr(0, point));
+    auto end = parse_weekday(str.substr(point + 1));
+
+    auto next_weekday = [](auto wd) -> Lines::Temporal::Weekday {
+        if (wd == Lines::Temporal::Weekday::Sunday) {
+            return Lines::Temporal::Weekday::Monday;
+        }
+
+        return static_cast<Lines::Temporal::Weekday>(static_cast<uint8_t>(wd) + 1);
+    };
+
+    for (auto wd = begin;; wd = next_weekday(wd)) {
+        res.push_back(wd);
+        if (wd == end) {
+            break;
+        }
+    }
+    return res;
+}
+
+// Parses repeat rule with weekdays, like "mon,wed.sat"
+// wd1,wd2 means "WD1 and WD2"
+// wd1.wd2 means "From WD1 to WD2"
+auto parse_repeat_weekdays(std::string str) -> std::vector<Lines::Temporal::Weekday> {
+    str = to_lower_str(str);
+    std::vector<Lines::Temporal::Weekday> res;
+
+    std::stringstream ss(str);
+    std::string wds;
+    while (std::getline(ss, wds, ',')) {
+        for (const auto &el : parse_repeat_weekday(wds)) {
+            res.push_back(el);
+        }
+    }
+    return res;
+}
 } // namespace
+
+// Date parser without regex validation
+auto parse_date_nv(const std::string &str) -> Lines::Temporal::Date {
+    auto expr = split_temporal_expression(str);
+    Lines::Temporal::Date res{Lines::Temporal::Days{0}};
+
+    res = parse_date_base(expr.base);
+
+    eval_date_operators(res, parse_temporal_operators(expr.operators));
+
+    return res;
+}
+// Same for time
+auto parse_time_nv(const std::string &str) -> Lines::Temporal::Timestamp {
+    auto expr = split_temporal_expression(str);
+    Lines::Temporal::Timestamp res = parse_time_base(expr.base);
+
+    eval_time_operators(res, parse_temporal_operators(expr.operators));
+
+    return res;
+}
 
 auto parse_date(const std::string &str) -> Lines::Temporal::Date {
     static const std::regex date_regex(
@@ -231,14 +375,7 @@ Operators:
   -N[ymwd]  subtract time)");
     }
 
-    auto expr = split_temporal_expression(str);
-    Lines::Temporal::Date res{Lines::Temporal::Days{0}};
-
-    res = parse_date_base(expr.base);
-
-    eval_date_operators(res, parse_temporal_operators(expr.operators));
-
-    return res;
+    return parse_date_nv(str);
 }
 
 auto parse_time(const std::string &str) -> Lines::Temporal::Timestamp {
@@ -264,13 +401,23 @@ Operators:
   +N[hms]  add time
   -N[hms]  subtract time)");
     }
+    return parse_time_nv(str);
+}
 
-    auto expr = split_temporal_expression(str);
-    Lines::Temporal::Timestamp res = parse_time_base(expr.base);
+auto parse_timepoint_nv(const std::string &str) -> Lines::Temporal::TimePoint {
+    std::size_t middle_divider = str.find('_');
 
-    eval_time_operators(res, parse_temporal_operators(expr.operators));
+    std::string date = str.substr(0, middle_divider);
 
-    return res;
+    if (middle_divider == std::string::npos) {
+        return Lines::Temporal::DateTime{parse_date_nv(date),
+                                         Lines::Temporal::Timestamp{Lines::Temporal::Seconds{-1}}}
+            .time_point();
+    }
+
+    std::string time = str.substr(middle_divider + 1);
+
+    return Lines::Temporal::DateTime{parse_date_nv(date), parse_time_nv(time)}.time_point();
 }
 
 auto parse_timepoint(const std::string &str) -> Lines::Temporal::TimePoint {
@@ -287,4 +434,32 @@ auto parse_timepoint(const std::string &str) -> Lines::Temporal::TimePoint {
     std::string time = str.substr(middle_divider + 1);
 
     return Lines::Temporal::DateTime{parse_date(date), parse_time(time)}.time_point();
+}
+
+auto parse_repeat_rule(const std::string &str) -> Lines::TaskRepeatRule {
+    static const std::regex every_unit_regex(R"(^(\d+)(y|mo|w|d|h|m|s)$)", std::regex::icase);
+    static const std::regex every_weekday_regex(
+        R"(^((mon|tue|wed|thu|fri|sat|sun)[,.])*(mon|tue|wed|thu|fri|sat|sun)$)",
+        std::regex::icase);
+
+    std::smatch groups;
+    if (std::regex_match(str, groups, every_unit_regex)) {
+        std::size_t val = std::stoi(groups[1]);
+        std::string unit = groups[2];
+        Lines::TaskRepeatRule res;
+        res.repeat_type = Lines::TaskRepeat::EveryUnit{.interval = parse_repeat_interval(val, unit),
+                                                       .unit_str = unit};
+        return res;
+    }
+    if (!std::regex_match(str, every_weekday_regex)) {
+        throw std::invalid_argument(R"(ERROR: Invalid repeat rule format. Formats:
+<N>unit     (e.g. "3d" repeats every 3 days)
+wd1,wd2.wd3 (e.g. "mon,wed.sun" repeats on monday and from wednesday to sunday
+
+See "lines-cli help repeat" for more info)");
+    }
+
+    Lines::TaskRepeatRule res;
+    res.repeat_type = Lines::TaskRepeat::EveryWeekday{.weekdays = parse_repeat_weekdays(str)};
+    return res;
 }

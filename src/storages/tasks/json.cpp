@@ -43,7 +43,7 @@ auto Lines::TasksJSON::from_json(const nlohmann::json &json) -> Lines::Task {
     Lines::Task task(info);
 
     if (json.contains("deadline")) {
-        task.set_deadline(parse_timepoint(json["deadline"].get<std::string>()));
+        task.set_deadline(parse_timepoint_nv(json["deadline"].get<std::string>()));
     }
 
     if (completed) {
