@@ -8,7 +8,9 @@
 
 #include <cctype>
 #include <cstddef>
+#include <exception>
 #include <format>
+#include <optional>
 #include <ranges>
 #include <stdexcept>
 #include <string>
@@ -137,6 +139,16 @@ void Tasks::addition_callback() {
         if (_options.deadline) {
             task.set_deadline(parse_timepoint(*_options.deadline));
         }
+    } catch (const std::exception &e) {
+        throw CLI::ValidationError(e.what());
+    }
+
+    try {
+        if (_options.repeat_rule) {
+            task.set_repeat_rule(parse_repeat_rule(*_options.repeat_rule));
+            task.set_deadline(Lines::Temporal::LocalClock::now());
+            task.advance_deadline();
+        }
     } catch (const std::invalid_argument &e) {
         throw CLI::ValidationError(e.what());
     }
@@ -168,6 +180,20 @@ void Tasks::editing_callback() {
         } else {
             try {
                 tmp.set_deadline(parse_timepoint(*_options.deadline));
+            } catch (const std::exception &e) {
+                throw CLI::ValidationError(e.what());
+            }
+        }
+    }
+    if (_options.repeat_rule) {
+        if (_options.repeat_rule == "0") {
+            tmp.set_repeat_rule(std::nullopt);
+            tmp.set_deadline(std::nullopt);
+        } else {
+            try {
+                tmp.set_repeat_rule(parse_repeat_rule(*_options.repeat_rule));
+                tmp.set_deadline(Lines::Temporal::LocalClock::now());
+                tmp.advance_deadline();
             } catch (const std::invalid_argument &e) {
                 throw CLI::ValidationError(e.what());
             }

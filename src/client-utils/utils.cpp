@@ -2,6 +2,7 @@
 
 #include "lines/temporal/clocks.hpp"
 
+#include <format>
 #include <iostream>
 
 auto confirm() -> bool {
@@ -53,6 +54,9 @@ auto task_str_unfolded(const Lines::Task &task) -> std::string {
     }
     if (task.deadline()) {
         result += std::format("Deadline: {}\n", timepoint_str(*task.deadline()));
+    }
+    if (task.repeat_rule() && task.next_deadline()) {
+        result += std::format("Next deadline: {}\n", timepoint_str(*task.next_deadline()));
     }
     result += '\n' + completion_sign(task);
     return result;
