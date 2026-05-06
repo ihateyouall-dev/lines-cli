@@ -73,6 +73,7 @@ void Tasks::editing_init(CLI::App &app) {
     add_task_options(*edit, "Give task a new",
                      TaskOptionsFormats{.timepoint_format = timepoint_format,
                                         .disabling_annot = ". Enter \'0\' to disable it"});
+    add_force_flag(*edit, "editing");
 
     edit->callback([this]() -> void { editing_callback(); });
 }
@@ -81,6 +82,8 @@ void Tasks::deletion_init(CLI::App &app) {
     auto *delete_app = app.add_subcommand("delete", "Delete tasks");
 
     add_filter_options(*delete_app, "Delete");
+
+    delete_app->require_option(1);
 
     delete_app->add_flag("-f,--force", _options.force, "Force deletion");
 
@@ -93,6 +96,12 @@ void Tasks::completion_init(CLI::App &app) {
 
     add_filter_options(*complete, "Complete");
     add_filter_options(*uncomplete, "Uncomplete");
+
+    add_force_flag(*complete, "completion");
+    add_force_flag(*uncomplete, "uncompletion");
+
+    complete->require_option(1);
+    uncomplete->require_option(1);
 
     complete->callback([this]() -> void { complete_callback(); });
     uncomplete->callback([this]() -> void { uncomplete_callback(); });
@@ -114,10 +123,12 @@ void Tasks::save() {
 
 auto Tasks::dirty() const -> bool { return _dirty; };
 
-void Tasks::add_filter_options(CLI::App &app, const std::string_view &desc_prefix) {
+void Tasks::add_filter_options(CLI::App &app, std::string_view desc_prefix) {
     auto *filters = app.add_option_group("filters");
     filters->add_option("-i,--id", _options.tasks_filter_rule.id,
                         std::format("{} task with given id", desc_prefix));
+    filters->add_flag("-a,--all", _options.tasks_filter_rule.all,
+                      std::format("{} all tasks", desc_prefix));
     // Tag specific filters
     filters->add_option(
         "-T,--any-tag", _options.tasks_filter_rule.any_tag,
@@ -146,6 +157,10 @@ void Tasks::add_filter_options(CLI::App &app, const std::string_view &desc_prefi
                                std::format("{} only active tasks", desc_prefix));
     filters->add_flag_callback("--ex,--expired", active_callback(false),
                                std::format("{} only expired tasks", desc_prefix));
+}
+
+void Tasks::add_force_flag(CLI::App &app, std::string_view desc_postfix) {
+    app.add_flag("-f,--force", _options.force, std::format("Force {}", desc_postfix));
 }
 
 void Tasks::addition_callback() {
@@ -254,10 +269,10 @@ void Tasks::deletion_callback() {
         return;
     }
     if (tasks.size() == 1) {
-        std::cout << std::format("Deleted task:\nID: {}\n{}\n", tasks[0].id + 1,
+        std::cout << std::format("Task to delete:\nID: {}\n{}\n", tasks[0].id + 1,
                                  task_str_unfolded(*tasks[0].task));
     } else {
-        std::cout << "Deleted tasks:\n";
+        std::cout << "Tasks to delete:\n";
         for (const auto &task : tasks) {
             std::cout << std::format("{}. {}\n", task.id + 1, task_str(*task.task));
         }

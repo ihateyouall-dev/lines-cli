@@ -11,6 +11,7 @@ class Task;
 struct TasksFilterRule {
     using TaskID = std::size_t;
     using TaskTag = std::string;
+    std::optional<bool> all;
     std::optional<TaskID> id;
     std::optional<std::vector<TaskTag>> any_tag;
     std::optional<std::vector<TaskTag>> all_tags;

@@ -38,9 +38,9 @@ auto Lines::TasksJSON::to_json(const Lines::Task &task) -> nlohmann::json {
             result["repeat"]["type"] = 1;
             result["repeat"]["weekdays"] = rtype.weekdays;
         }
+    } else {
+        result["completed"] = task.completed();
     }
-
-    result["completed"] = task.completed();
     return result;
 }
 

@@ -44,7 +44,8 @@ class Tasks { // NOLINT
                           const TaskOptionsFormats &formats = TaskOptionsFormats{
                               .timepoint_format = "YYYY/MM/DD[_HH:MM[:SS]]",
                               .disabling_annot = ""});
-    void add_filter_options(CLI::App &app, const std::string_view &desc_prefix);
+    void add_filter_options(CLI::App &app, std::string_view desc_prefix);
+    void add_force_flag(CLI::App &app, std::string_view desc_postfix);
 
     void showing_init(CLI::App &app);
     void editing_init(CLI::App &app);
