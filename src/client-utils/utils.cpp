@@ -74,10 +74,10 @@ auto task_str_unfolded(const Lines::Task &task) -> std::string {
 
 auto task_str(const Lines::Task &task) -> std::string {
     std::string res = std::format("{} ", completion_sign(task));
-    if (task.deadline()) {
-        res += std::format("{} ", timepoint_str(*task.deadline()));
-    }
     res += task.title();
+    if (task.deadline()) {
+        res += std::format(" {}", timepoint_str(*task.deadline()));
+    }
     if (!task.tags().empty()) {
         res += tags_str(task);
     }
