@@ -39,7 +39,17 @@ auto tags_str(const Lines::Task &task) -> std::string {
 }
 
 auto completion_sign(const Lines::Task &task) -> std::string {
-    return std::format("[{}]", (task.completed() ? "X" : " "));
+    std::string sign{};
+    assert(!task.completed() ||
+           !task.repeat_rule() && "Tasks with repeat rule cannot have completion state");
+    if (task.repeat_rule()) {
+        sign = "↻";
+    } else if (task.completed()) {
+        sign = "✓";
+    } else {
+        sign = " ";
+    }
+    return std::format("[{}]", sign);
 }
 
 auto task_str_unfolded(const Lines::Task &task) -> std::string {

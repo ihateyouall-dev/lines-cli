@@ -3,6 +3,9 @@
 #include "client-utils/parsers.hpp"
 #include "client-utils/utils.hpp"
 #include "lines/tasks/task.hpp"
+#include "lines/tasks/task_repeat.hpp"
+#include "lines/temporal/duration.hpp"
+#include "lines/temporal/ymd.hpp"
 #include "nlohmann/json.hpp"
 
 #include <cstddef>
@@ -12,13 +15,29 @@
 auto Lines::TasksJSON::to_json(const Lines::Task &task) -> nlohmann::json {
     nlohmann::json result;
     result["title"] = task.title();
-    result["description"] = task.description().value_or("");
+    if (task.description()) {
+        result["description"] = task.description();
+    }
     if (task.deadline()) {
         result["deadline"] = timepoint_str_s(*task.deadline());
     }
 
     for (const auto &tag : task.tags()) {
         result["tags"].push_back(tag);
+    }
+
+    if (task.repeat_rule()) {
+        auto rr = *task.repeat_rule();
+        try {
+            auto rtype = std::get<Lines::TaskRepeat::EveryUnit>(rr.repeat_type);
+            result["repeat"]["type"] = 0;
+            result["repeat"]["interval"] = rtype.interval.count();
+            result["repeat"]["unit"] = rtype.unit_str;
+        } catch (std::bad_variant_access &) {
+            auto rtype = std::get<Lines::TaskRepeat::EveryWeekday>(rr.repeat_type);
+            result["repeat"]["type"] = 1;
+            result["repeat"]["weekdays"] = rtype.weekdays;
+        }
     }
 
     result["completed"] = task.completed();
@@ -28,7 +47,9 @@ auto Lines::TasksJSON::to_json(const Lines::Task &task) -> nlohmann::json {
 auto Lines::TasksJSON::from_json(const nlohmann::json &json) -> Lines::Task {
     Lines::TaskInfo info;
     info.title = json.at("title").get<std::string>();
-    info.description = json.value("description", "");
+    if (json.contains("description")) {
+        info.description = json["description"].get<std::string>();
+    }
     if (json.contains("tags")) {
         for (const auto &tag : json["tags"]) {
             info.tags.emplace_back(tag.get<std::string>());
@@ -37,13 +58,38 @@ auto Lines::TasksJSON::from_json(const nlohmann::json &json) -> Lines::Task {
 
     bool completed{};
     if (json.contains("completed")) {
-        bool completed = json["completed"].get<bool>();
+        completed = json["completed"].get<bool>();
     }
 
     Lines::Task task(info);
 
     if (json.contains("deadline")) {
         task.set_deadline(parse_timepoint_nv(json["deadline"].get<std::string>()));
+    }
+
+    if (json.contains("repeat")) {
+        Lines::TaskRepeatRule rr;
+        int type = json["repeat"]["type"].get<int>();
+        if (type == 0) {
+            if (!json["repeat"].contains("interval")) {
+                throw std::runtime_error("Lines::TasksJSON::from_json: given json contains repeat "
+                                         "rule which must contain interval, but hasn't it");
+            }
+            Lines::Temporal::Seconds interval{json["repeat"]["interval"].get<uint32_t>()};
+            auto unit_str = json["repeat"].value("unit", "s");
+            rr.repeat_type =
+                Lines::TaskRepeat::EveryUnit{.interval = interval, .unit_str = unit_str};
+        } else if (type == 1) {
+            if (!json["repeat"].contains("weekdays")) {
+                throw std::runtime_error("Lines::TasksJSON::from_json: given json contains repeat "
+                                         "rule which must contain weekdays, but hasn't it");
+            }
+            auto weekdays = json["repeat"]["weekdays"].get<std::vector<Lines::Temporal::Weekday>>();
+            rr.repeat_type = Lines::TaskRepeat::EveryWeekday{weekdays};
+        } else {
+            throw std::runtime_error("Lines::TasksJSON::from_json: unknown repeat type");
+        }
+        task.set_repeat_rule(rr);
     }
 
     if (completed) {

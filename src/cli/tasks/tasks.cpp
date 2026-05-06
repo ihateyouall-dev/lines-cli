@@ -15,6 +15,25 @@
 #include <stdexcept>
 #include <string>
 
+namespace {
+void enable_task_repeat_rule(Lines::Task &task, const std::string &rr) {
+    task.set_repeat_rule(parse_repeat_rule(rr));
+    task.set_deadline(task.deadline().value_or(Lines::Temporal::LocalClock::now()));
+    task.advance_deadline();
+}
+
+void disable_task_repeat_rule(Lines::Task &task) { task.set_repeat_rule(std::nullopt); }
+void disable_task_deadline(Lines::Task &task) { task.set_deadline(std::nullopt); }
+
+void complete_or_advance_deadline(Lines::Task &task) {
+    if (task.repeat_rule()) {
+        task.advance_deadline();
+    } else {
+        task.complete();
+    }
+}
+} // namespace
+
 Tasks::Tasks() { _storage.load_from_file(); }; // NOLINT
 
 auto Tasks::require_task(std::size_t index) -> Lines::Task * {
@@ -145,9 +164,7 @@ void Tasks::addition_callback() {
 
     try {
         if (_options.repeat_rule) {
-            task.set_repeat_rule(parse_repeat_rule(*_options.repeat_rule));
-            task.set_deadline(Lines::Temporal::LocalClock::now());
-            task.advance_deadline();
+            enable_task_repeat_rule(task, *_options.repeat_rule);
         }
     } catch (const std::invalid_argument &e) {
         throw CLI::ValidationError(e.what());
@@ -176,7 +193,7 @@ void Tasks::editing_callback() {
     }
     if (_options.deadline) {
         if (*_options.deadline == "0") {
-            tmp.set_deadline(std::nullopt);
+            disable_task_deadline(tmp);
         } else {
             try {
                 tmp.set_deadline(parse_timepoint(*_options.deadline));
@@ -187,13 +204,11 @@ void Tasks::editing_callback() {
     }
     if (_options.repeat_rule) {
         if (_options.repeat_rule == "0") {
-            tmp.set_repeat_rule(std::nullopt);
-            tmp.set_deadline(std::nullopt);
+            disable_task_repeat_rule(tmp);
         } else {
             try {
-                tmp.set_repeat_rule(parse_repeat_rule(*_options.repeat_rule));
-                tmp.set_deadline(Lines::Temporal::LocalClock::now());
-                tmp.advance_deadline();
+                tmp.uncomplete();
+                enable_task_repeat_rule(tmp, *_options.repeat_rule);
             } catch (const std::invalid_argument &e) {
                 throw CLI::ValidationError(e.what());
             }
@@ -274,11 +289,11 @@ void Tasks::complete_callback() {
             std::cerr << "ERROR: Task already completed\n";
             return;
         }
-        task.task->complete();
+        complete_or_advance_deadline(*task.task);
         std::cout << std::format("ID: {}\n{}\n", task.id + 1, task_str_unfolded(*task.task));
     } else {
         for (const auto &task : tasks) {
-            task.task->complete();
+            complete_or_advance_deadline(*task.task);
             std::cout << std::format("{}. {}\n", task.id + 1, task_str(*task.task));
         }
     }
