@@ -59,7 +59,7 @@ void eval_date_operators(Lines::Temporal::Date &date, const std::vector<Temporal
             break;
         default:
             throw std::invalid_argument(
-                std::format("ERROR: Unknown unit: {}. Only units are usable with relative dates "
+                std::format("ERROR: Unknown unit: {}. Only units are usable with date operators "
                             "are y(years), m(months), w(weeks) and d(days)",
                             op.unit));
         }
@@ -256,7 +256,9 @@ h - hours
 d - days
 w - weeks
 mo - months
-y - years)");
+y - years
+
+See "lines-cli docs repeat" for more info)");
 }
 
 auto parse_weekday(std::string_view str) -> Lines::Temporal::Weekday {
@@ -295,7 +297,7 @@ Examples:
 mon
 wed.sat
 
-See "lines-cli help repeat" for more info)");
+See "lines-cli docs repeat" for more info)");
     }
     std::vector<Lines::Temporal::Weekday> res;
     auto begin = parse_weekday(str.substr(0, point));
@@ -460,7 +462,7 @@ auto parse_repeat_rule(const std::string &str) -> Lines::TaskRepeatRule {
 <N>unit     (e.g. "3d" repeats every 3 days)
 wd1,wd2.wd3 (e.g. "mon,wed.sun" repeats on monday and from wednesday to sunday
 
-See "lines-cli help repeat" for more info)");
+See "lines-cli docs repeat" for more info)");
     }
 
     Lines::TaskRepeatRule res;
