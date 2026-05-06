@@ -5,6 +5,7 @@
 
 #include <string>
 
+namespace Lines::ClientUtils {
 auto confirm() -> bool;
 
 auto date_str(const Lines::Temporal::Date &date) -> std::string;
@@ -25,3 +26,4 @@ auto today_str() -> std::string;
 
 auto tomorrow() -> Lines::Temporal::Date;
 auto tomorrow_str() -> std::string;
+} // namespace Lines::ClientUtils

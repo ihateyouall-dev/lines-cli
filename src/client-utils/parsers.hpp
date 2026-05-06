@@ -7,6 +7,7 @@
 
 #include <string>
 
+namespace Lines::ClientUtils::Parsers {
 void throw_range_error(std::string_view prefix, std::string_view range_str);
 
 auto parse_date_nv(const std::string &str) -> Lines::Temporal::Date;
@@ -22,3 +23,4 @@ auto parse_timepoint_nv(const std::string &str) -> Lines::Temporal::TimePoint;
 auto parse_timepoint(const std::string &str) -> Lines::Temporal::TimePoint;
 
 auto parse_repeat_rule(const std::string &str) -> Lines::TaskRepeatRule;
+} // namespace Lines::ClientUtils::Parsers

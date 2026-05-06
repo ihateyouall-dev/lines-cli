@@ -5,6 +5,7 @@
 #include <format>
 #include <iostream>
 
+namespace Lines::ClientUtils {
 auto confirm() -> bool {
     std::string answer{};
     std::cout << "\n\nAre you sure? [yN]: ";
@@ -89,3 +90,4 @@ auto today_str() -> std::string { return date_str(today()); }
 
 auto tomorrow() -> Lines::Temporal::Date { return today() + Lines::Temporal::Days{1}; }
 auto tomorrow_str() -> std::string { return date_str(tomorrow()); }
+} // namespace Lines::ClientUtils

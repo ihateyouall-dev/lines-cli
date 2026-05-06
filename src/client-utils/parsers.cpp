@@ -20,7 +20,8 @@
 #include <unordered_map>
 #include <vector>
 
-void throw_range_error(std::string_view prefix, std::string_view range_str) {
+void Lines::ClientUtils::Parsers::throw_range_error(std::string_view prefix,
+                                                    std::string_view range_str) {
     throw std::out_of_range(std::format("ERROR: {} can be only in range {}", prefix, range_str));
 }
 
@@ -109,9 +110,10 @@ auto parse_temporal_operators(std::string_view str) -> std::vector<TemporalOpera
 
         while (i < str.size() && (std::isdigit(static_cast<unsigned char>(str[i])) != 0)) {
             has_digits = true;
-            num = (num * 10) + (str[i] - '0');
+            num = (num * 10) + static_cast<uint64_t>((str[i] - '0'));
             if (num > UINT16_MAX) {
-                throw_range_error("Value in operator", std::format("[0,{}]", UINT16_MAX));
+                Lines::ClientUtils::Parsers::throw_range_error("Value in operator",
+                                                               std::format("[0,{}]", UINT16_MAX));
             }
             ++i;
         }
@@ -125,7 +127,8 @@ auto parse_temporal_operators(std::string_view str) -> std::vector<TemporalOpera
         }
         unit = str[i];
 
-        res.emplace_back(num * sign, std::tolower(static_cast<unsigned char>(unit)));
+        res.emplace_back(static_cast<int>(num) * sign,
+                         std::tolower(static_cast<unsigned char>(unit)));
         ++i;
     }
     return res;
@@ -176,10 +179,10 @@ auto parse_date_base(const std::string &str) -> Lines::Temporal::Date {
 
     assert(t_year.ok());
     if (!t_month.ok()) {
-        throw_range_error("Month", "[1;12]");
+        Lines::ClientUtils::Parsers::throw_range_error("Month", "[1;12]");
     }
     if (!t_day.ok()) {
-        throw_range_error("Day", "[1;31]");
+        Lines::ClientUtils::Parsers::throw_range_error("Day", "[1;31]");
     }
 
     return {t_year, t_month, t_day};
@@ -201,15 +204,15 @@ auto parse_time_base(const std::string &str) -> Lines::Temporal::Timestamp {
     ss >> hour >> divider >> minute >> divider >> second;
 
     if (hour < 0 || hour > 23) {
-        throw_range_error("Hour", "[0;23]");
+        Lines::ClientUtils::Parsers::throw_range_error("Hour", "[0;23]");
     }
 
     if (minute < 0 || minute > 59) {
-        throw_range_error("Minute", "[0;59]");
+        Lines::ClientUtils::Parsers::throw_range_error("Minute", "[0;59]");
     }
 
     if (second < 0 || second > 59) {
-        throw_range_error("Second", "[0;59]");
+        Lines::ClientUtils::Parsers::throw_range_error("Second", "[0;59]");
     }
 
     return {Lines::Temporal::Hours{hour}, Lines::Temporal::Minutes{minute},
@@ -333,6 +336,7 @@ auto parse_repeat_weekdays(std::string str) -> std::vector<Lines::Temporal::Week
 }
 } // namespace
 
+namespace Lines::ClientUtils::Parsers {
 // Date parser without regex validation
 auto parse_date_nv(const std::string &str) -> Lines::Temporal::Date {
     auto expr = split_temporal_expression(str);
@@ -444,7 +448,7 @@ auto parse_repeat_rule(const std::string &str) -> Lines::TaskRepeatRule {
 
     std::smatch groups;
     if (std::regex_match(str, groups, every_unit_regex)) {
-        std::size_t val = std::stoi(groups[1]);
+        std::size_t val = static_cast<std::size_t>(std::stoi(groups[1]));
         std::string unit = groups[2];
         Lines::TaskRepeatRule res;
         res.repeat_type = Lines::TaskRepeat::EveryUnit{.interval = parse_repeat_interval(val, unit),
@@ -463,3 +467,4 @@ See "lines-cli help repeat" for more info)");
     res.repeat_type = Lines::TaskRepeat::EveryWeekday{.weekdays = parse_repeat_weekdays(str)};
     return res;
 }
+} // namespace Lines::ClientUtils::Parsers

@@ -15,9 +15,11 @@
 #include <stdexcept>
 #include <string>
 
+using namespace Lines::ClientUtils;
+
 namespace {
 void enable_task_repeat_rule(Lines::Task &task, const std::string &rr) {
-    task.set_repeat_rule(parse_repeat_rule(rr));
+    task.set_repeat_rule(Parsers::parse_repeat_rule(rr));
     task.set_deadline(task.deadline().value_or(Lines::Temporal::LocalClock::now()));
     task.advance_deadline();
 }
@@ -127,7 +129,7 @@ void Tasks::add_filter_options(CLI::App &app, const std::string_view &desc_prefi
         "-D,--deadline",
         [this](const std::string &date) -> void {
             try {
-                _options.tasks_filter_rule.deadline = parse_timepoint(date);
+                _options.tasks_filter_rule.deadline = Parsers::parse_timepoint(date);
             } catch (std::invalid_argument &e) {
                 throw CLI::ValidationError(e.what());
             }
@@ -156,7 +158,7 @@ void Tasks::addition_callback() {
 
     try {
         if (_options.deadline) {
-            task.set_deadline(parse_timepoint(*_options.deadline));
+            task.set_deadline(Parsers::parse_timepoint(*_options.deadline));
         }
     } catch (const std::exception &e) {
         throw CLI::ValidationError(e.what());
@@ -196,7 +198,7 @@ void Tasks::editing_callback() {
             disable_task_deadline(tmp);
         } else {
             try {
-                tmp.set_deadline(parse_timepoint(*_options.deadline));
+                tmp.set_deadline(Parsers::parse_timepoint(*_options.deadline));
             } catch (const std::exception &e) {
                 throw CLI::ValidationError(e.what());
             }

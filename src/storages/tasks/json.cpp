@@ -19,7 +19,7 @@ auto Lines::TasksJSON::to_json(const Lines::Task &task) -> nlohmann::json {
         result["description"] = task.description();
     }
     if (task.deadline()) {
-        result["deadline"] = timepoint_str_s(*task.deadline());
+        result["deadline"] = Lines::ClientUtils::timepoint_str_s(*task.deadline());
     }
 
     for (const auto &tag : task.tags()) {
@@ -64,7 +64,8 @@ auto Lines::TasksJSON::from_json(const nlohmann::json &json) -> Lines::Task {
     Lines::Task task(info);
 
     if (json.contains("deadline")) {
-        task.set_deadline(parse_timepoint_nv(json["deadline"].get<std::string>()));
+        task.set_deadline(
+            Lines::ClientUtils::Parsers::parse_timepoint_nv(json["deadline"].get<std::string>()));
     }
 
     if (json.contains("repeat")) {
@@ -158,7 +159,7 @@ auto Lines::TasksJSONStorage::at(std::size_t index) const -> const Lines::Task &
 }
 
 void Lines::TasksJSONStorage::erase(std::ptrdiff_t index) {
-    if (index >= size() || index < 0) {
+    if (static_cast<std::size_t>(index) >= size() || index < 0) {
         throw std::out_of_range("Lines::TasksJSONStorage::erase: index out of range");
     }
     _tasks.erase(_tasks.begin() + index);

@@ -11,6 +11,7 @@
 #include <cstddef>
 #include <stdexcept>
 
+using namespace Lines::ClientUtils::Parsers;
 using namespace Lines::Temporal;
 using namespace Literals;
 
