@@ -1,5 +1,6 @@
 #include "client-utils/utils.hpp"
 
+#include "client-utils/colors.hpp"
 #include "lines/temporal/clocks.hpp"
 
 #include <format>
@@ -64,10 +65,10 @@ auto task_str_unfolded(const Lines::Task &task) -> std::string {
         result += std::format("Tags:{}\n", tags_str(task));
     }
     if (task.deadline()) {
-        result += std::format("Deadline: {}\n", timepoint_str(*task.deadline()));
+        result += std::format("Deadline: {}\n", deadline_str(*task.deadline()));
     }
     if (task.repeat_rule() && task.next_deadline()) {
-        result += std::format("Next deadline: {}\n", timepoint_str(*task.next_deadline()));
+        result += std::format("Next deadline: {}\n", deadline_str(*task.next_deadline()));
     }
     result += '\n' + completion_sign(task);
     return result;
@@ -77,7 +78,7 @@ auto task_str(const Lines::Task &task) -> std::string {
     std::string res = std::format("{} ", completion_sign(task));
     res += task.title();
     if (task.deadline()) {
-        res += std::format(" {}", timepoint_str(*task.deadline()));
+        res += std::format(" {}", deadline_str(*task.deadline()));
     }
     if (!task.tags().empty()) {
         res += tags_str(task);
@@ -90,4 +91,22 @@ auto today_str() -> std::string { return date_str(today()); }
 
 auto tomorrow() -> Lines::Temporal::Date { return today() + Lines::Temporal::Days{1}; }
 auto tomorrow_str() -> std::string { return date_str(tomorrow()); }
+
+auto deadline_color(const Lines::Temporal::TimePoint &deadline) -> std::string {
+    using namespace Lines::Temporal::Literals;
+
+    auto delta = deadline - Lines::Temporal::LocalClock::now();
+
+    if (delta < 0_s) {
+        return Colors::red;
+    }
+    if (delta <= 24_h) {
+        return Colors::yellow;
+    }
+    return Colors::green;
+}
+
+auto deadline_str(const Lines::Temporal::TimePoint &deadline) -> std::string {
+    return Colors::colorize(timepoint_str(deadline), deadline_color(deadline));
+}
 } // namespace Lines::ClientUtils

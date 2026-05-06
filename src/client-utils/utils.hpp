@@ -17,6 +17,10 @@ auto tags_str(const Lines::Task &task) -> std::string;
 
 auto completion_sign(const Lines::Task &task) -> std::string;
 
+auto deadline_color(const Lines::Temporal::TimePoint &deadline) -> std::string;
+
+auto deadline_str(const Lines::Temporal::TimePoint &deadline) -> std::string;
+
 auto task_str_unfolded(const Lines::Task &task) -> std::string;
 
 auto task_str(const Lines::Task &task) -> std::string;
