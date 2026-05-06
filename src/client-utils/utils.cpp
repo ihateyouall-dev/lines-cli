@@ -45,9 +45,9 @@ auto completion_sign(const Lines::Task &task) -> std::string {
     assert(!task.completed() ||
            !task.repeat_rule() && "Tasks with repeat rule cannot have completion state");
     if (task.repeat_rule()) {
-        sign = "↻";
+        sign = Colors::colorize("↻", Colors::blue);
     } else if (task.completed()) {
-        sign = "✓";
+        sign = Colors::colorize("✓", Colors::green);
     } else {
         sign = " ";
     }
