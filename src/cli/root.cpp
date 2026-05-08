@@ -3,7 +3,7 @@
 #include "cli/docs/docs.hpp"
 #include "lines/version.h"
 
-Root::Root() {
+Lines::CLI::Root::Root() {
     add_flag_callback("-v,--version",
                       []() -> void { std::cout << "Lines CLI " << LINES_VERSION << '\n'; });
     _tasks.init(*this);

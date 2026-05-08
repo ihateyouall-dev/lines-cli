@@ -36,9 +36,9 @@ void complete_or_advance_deadline(Lines::Task &task) {
 }
 } // namespace
 
-Tasks::Tasks() { _storage.load_from_file(); }; // NOLINT
+Lines::CLI::Tasks::Tasks() { _storage.load_from_file(); }; // NOLINT
 
-auto Tasks::require_task(std::size_t index) -> Lines::Task * {
+auto Lines::CLI::Tasks::require_task(std::size_t index) -> Lines::Task * {
     Lines::Task *result = nullptr;
     try {
         result = &_storage.at(index);
@@ -48,7 +48,7 @@ auto Tasks::require_task(std::size_t index) -> Lines::Task * {
     return result;
 }
 
-void Tasks::showing_init(CLI::App &app) {
+void Lines::CLI::Tasks::showing_init(::CLI::App &app) {
     auto *show = app.add_subcommand("show", "Show information about tasks");
 
     add_filter_options(*show, "Show");
@@ -56,7 +56,7 @@ void Tasks::showing_init(CLI::App &app) {
     show->callback([this]() -> void { showing_callback(); });
 }
 
-void Tasks::addition_init(CLI::App &app) {
+void Lines::CLI::Tasks::addition_init(::CLI::App &app) {
     auto *add = app.add_subcommand("add", "Add the task");
     add->add_option("title", _options.title, "Give task a title")->required();
     add_task_options(*add, "Give task a");
@@ -64,7 +64,7 @@ void Tasks::addition_init(CLI::App &app) {
     add->callback([this]() -> void { addition_callback(); });
 }
 
-void Tasks::editing_init(CLI::App &app) {
+void Lines::CLI::Tasks::editing_init(::CLI::App &app) {
     auto *edit = app.add_subcommand("edit", "Edit task");
     edit->add_option("-i,--id", _options.tasks_filter_rule.id, "Edit task with given ID")
         ->required();
@@ -78,7 +78,7 @@ void Tasks::editing_init(CLI::App &app) {
     edit->callback([this]() -> void { editing_callback(); });
 }
 
-void Tasks::deletion_init(CLI::App &app) {
+void Lines::CLI::Tasks::deletion_init(::CLI::App &app) {
     auto *delete_app = app.add_subcommand("delete", "Delete tasks");
 
     add_filter_options(*delete_app, "Delete");
@@ -90,7 +90,7 @@ void Tasks::deletion_init(CLI::App &app) {
     delete_app->callback([this]() -> void { deletion_callback(); });
 }
 
-void Tasks::completion_init(CLI::App &app) {
+void Lines::CLI::Tasks::completion_init(::CLI::App &app) {
     auto *complete = app.add_subcommand("complete", "Complete tasks");
     auto *uncomplete = app.add_subcommand("uncomplete", "Uncomplete tasks");
 
@@ -107,7 +107,7 @@ void Tasks::completion_init(CLI::App &app) {
     uncomplete->callback([this]() -> void { uncomplete_callback(); });
 }
 
-void Tasks::init(CLI::App &app) {
+void Lines::CLI::Tasks::init(::CLI::App &app) {
     auto *tasks = app.add_subcommand("tasks", "Work with tasks");
     addition_init(*tasks);
     completion_init(*tasks);
@@ -116,14 +116,14 @@ void Tasks::init(CLI::App &app) {
     editing_init(*tasks);
 }
 
-void Tasks::save() {
+void Lines::CLI::Tasks::save() {
     _storage.save_to_file();
     _dirty = false;
 }
 
-auto Tasks::dirty() const -> bool { return _dirty; };
+auto Lines::CLI::Tasks::dirty() const -> bool { return _dirty; };
 
-void Tasks::add_filter_options(CLI::App &app, std::string_view desc_prefix) {
+void Lines::CLI::Tasks::add_filter_options(::CLI::App &app, std::string_view desc_prefix) {
     auto *filters = app.add_option_group("filters");
     filters->add_option("-i,--id", _options.tasks_filter_rule.id,
                         std::format("{} task with given id", desc_prefix));
@@ -142,7 +142,7 @@ void Tasks::add_filter_options(CLI::App &app, std::string_view desc_prefix) {
             try {
                 _options.tasks_filter_rule.deadline = Parsers::parse_timepoint(date);
             } catch (std::invalid_argument &e) {
-                throw CLI::ValidationError(e.what());
+                throw ::CLI::ValidationError(e.what());
             }
         },
         std::format("{} task with given deadline (format: YYYY.MM.DD_[HH:MM[:SS]])", desc_prefix));
@@ -159,13 +159,13 @@ void Tasks::add_filter_options(CLI::App &app, std::string_view desc_prefix) {
                                std::format("{} only expired tasks", desc_prefix));
 }
 
-void Tasks::add_force_flag(CLI::App &app, std::string_view desc_postfix) {
+void Lines::CLI::Tasks::add_force_flag(::CLI::App &app, std::string_view desc_postfix) {
     app.add_flag("-f,--force", _options.force, std::format("Force {}", desc_postfix));
 }
 
-void Tasks::addition_callback() {
+void Lines::CLI::Tasks::addition_callback() {
     if (!_options.title) {
-        throw CLI::ValidationError("Added task title cannot be empty");
+        throw ::CLI::ValidationError("Added task title cannot be empty");
     }
 
     Lines::Task task{Lines::TaskInfo{*_options.title, _options.description,
@@ -176,7 +176,7 @@ void Tasks::addition_callback() {
             task.set_deadline(Parsers::parse_timepoint(*_options.deadline));
         }
     } catch (const std::exception &e) {
-        throw CLI::ValidationError(e.what());
+        throw ::CLI::ValidationError(e.what());
     }
 
     try {
@@ -184,7 +184,7 @@ void Tasks::addition_callback() {
             enable_task_repeat_rule(task, *_options.repeat_rule);
         }
     } catch (const std::invalid_argument &e) {
-        throw CLI::ValidationError(e.what());
+        throw ::CLI::ValidationError(e.what());
     }
 
     std::size_t id = _storage.size();
@@ -193,7 +193,7 @@ void Tasks::addition_callback() {
     _dirty = true;
 }
 
-void Tasks::editing_callback() {
+void Lines::CLI::Tasks::editing_callback() {
     auto *task = require_task(*_options.tasks_filter_rule.id - 1);
     if (task == nullptr) {
         return;
@@ -215,7 +215,7 @@ void Tasks::editing_callback() {
             try {
                 tmp.set_deadline(Parsers::parse_timepoint(*_options.deadline));
             } catch (const std::exception &e) {
-                throw CLI::ValidationError(e.what());
+                throw ::CLI::ValidationError(e.what());
             }
         }
     }
@@ -227,7 +227,7 @@ void Tasks::editing_callback() {
                 tmp.uncomplete();
                 enable_task_repeat_rule(tmp, *_options.repeat_rule);
             } catch (const std::invalid_argument &e) {
-                throw CLI::ValidationError(e.what());
+                throw ::CLI::ValidationError(e.what());
             }
         }
     }
@@ -240,7 +240,7 @@ void Tasks::editing_callback() {
     _dirty = true;
 }
 
-void Tasks::showing_callback() {
+void Lines::CLI::Tasks::showing_callback() {
     if (_options.tasks_filter_rule.id) {
         --*_options.tasks_filter_rule.id;
     }
@@ -259,7 +259,7 @@ void Tasks::showing_callback() {
     }
 }
 
-void Tasks::deletion_callback() {
+void Lines::CLI::Tasks::deletion_callback() {
     if (_options.tasks_filter_rule.id) {
         --*_options.tasks_filter_rule.id;
     }
@@ -272,7 +272,7 @@ void Tasks::deletion_callback() {
         std::cout << std::format("Task to delete:\nID: {}\n{}\n", tasks[0].id + 1,
                                  task_str_unfolded(*tasks[0].task));
     } else {
-        std::cout << "Tasks to delete:\n";
+        std::cout << "Lines::CLI::Tasks to delete:\n";
         for (const auto &task : tasks) {
             std::cout << std::format("{}. {}\n", task.id + 1, task_str(*task.task));
         }
@@ -291,7 +291,7 @@ void Tasks::deletion_callback() {
     _dirty = true;
 }
 
-void Tasks::complete_callback() {
+void Lines::CLI::Tasks::complete_callback() {
     if (_options.tasks_filter_rule.id) {
         --*_options.tasks_filter_rule.id;
     }
@@ -317,7 +317,7 @@ void Tasks::complete_callback() {
     _dirty = true;
 }
 
-void Tasks::uncomplete_callback() {
+void Lines::CLI::Tasks::uncomplete_callback() {
     if (_options.tasks_filter_rule.id) {
         --*_options.tasks_filter_rule.id;
     }
@@ -343,8 +343,8 @@ void Tasks::uncomplete_callback() {
     _dirty = true;
 }
 
-void Tasks::add_task_options(CLI::App &app, std::string_view desc_prefix, // NOLINT
-                             const TaskOptionsFormats &formats) {
+void Lines::CLI::Tasks::add_task_options(::CLI::App &app, std::string_view desc_prefix, // NOLINT
+                                         const TaskOptionsFormats &formats) {
     app.add_option("-d,--description", _options.description,
                    std::format("{} description", desc_prefix));
     app.add_option("-t,--tags", _options.tags, std::format("{} tags", desc_prefix));

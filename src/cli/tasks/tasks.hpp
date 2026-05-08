@@ -9,6 +9,7 @@ namespace CLI {
 class App;
 }
 
+namespace Lines::CLI {
 class Tasks { // NOLINT
     // Options that gained from command line
     struct Options {
@@ -40,18 +41,18 @@ class Tasks { // NOLINT
         // Message like "Enter 0 to disable something" in editing
         std::string disabling_annot;
     };
-    void add_task_options(CLI::App &app, std::string_view desc_prefix, // NOLINT
+    void add_task_options(::CLI::App &app, std::string_view desc_prefix, // NOLINT
                           const TaskOptionsFormats &formats = TaskOptionsFormats{
                               .timepoint_format = "YYYY/MM/DD[_HH:MM[:SS]]",
                               .disabling_annot = ""});
-    void add_filter_options(CLI::App &app, std::string_view desc_prefix);
-    void add_force_flag(CLI::App &app, std::string_view desc_postfix);
+    void add_filter_options(::CLI::App &app, std::string_view desc_prefix);
+    void add_force_flag(::CLI::App &app, std::string_view desc_postfix);
 
-    void showing_init(CLI::App &app);
-    void editing_init(CLI::App &app);
-    void addition_init(CLI::App &app);
-    void deletion_init(CLI::App &app);
-    void completion_init(CLI::App &app);
+    void showing_init(::CLI::App &app);
+    void editing_init(::CLI::App &app);
+    void addition_init(::CLI::App &app);
+    void deletion_init(::CLI::App &app);
+    void completion_init(::CLI::App &app);
 
     void showing_callback();
     void editing_callback();
@@ -68,10 +69,11 @@ class Tasks { // NOLINT
     auto operator=(const Tasks &) -> Tasks & = default;
     auto operator=(Tasks &&) -> Tasks & = delete;
 
-    void init(CLI::App &app);
+    void init(::CLI::App &app);
 
     void save();
     [[nodiscard]] auto dirty() const -> bool;
 
     ~Tasks() = default;
 };
+} // namespace Lines::CLI
