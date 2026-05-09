@@ -28,15 +28,20 @@ auto Lines::TasksJSON::to_json(const Lines::Task &task) -> nlohmann::json {
 
     if (task.repeat_rule()) {
         auto rr = *task.repeat_rule();
+        static constexpr int EVERY_UNIT_T = 0;
+        static constexpr int EVERY_WEEKDAY_T = 1;
         try {
             auto rtype = std::get<Lines::TaskRepeat::EveryUnit>(rr.repeat_type);
-            result["repeat"]["type"] = 0;
+            result["repeat"]["type"] = EVERY_UNIT_T;
             result["repeat"]["interval"] = rtype.interval.count();
             result["repeat"]["unit"] = rtype.unit_str;
         } catch (std::bad_variant_access &) {
             auto rtype = std::get<Lines::TaskRepeat::EveryWeekday>(rr.repeat_type);
-            result["repeat"]["type"] = 1;
+            result["repeat"]["type"] = EVERY_WEEKDAY_T;
             result["repeat"]["weekdays"] = rtype.weekdays;
+        }
+        if (rr.end) {
+            result["repeat"]["end"] = Lines::ClientUtils::timepoint_str_s(*rr.end);
         }
     } else {
         result["completed"] = task.completed();
@@ -89,6 +94,10 @@ auto Lines::TasksJSON::from_json(const nlohmann::json &json) -> Lines::Task {
             rr.repeat_type = Lines::TaskRepeat::EveryWeekday{weekdays};
         } else {
             throw std::runtime_error("Lines::TasksJSON::from_json: unknown repeat type");
+        }
+        if (json["repeat"].contains("end")) {
+            rr.end =
+                ClientUtils::Parsers::parse_timepoint_nv(json["repeat"]["end"].get<std::string>());
         }
         task.set_repeat_rule(rr);
     }

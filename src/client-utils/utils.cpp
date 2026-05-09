@@ -67,8 +67,14 @@ auto task_str_unfolded(const Lines::Task &task) -> std::string {
     if (task.deadline()) {
         result += std::format("Deadline: {}\n", deadline_str(*task.deadline()));
     }
-    if (task.repeat_rule() && task.next_deadline()) {
-        result += std::format("Next deadline: {}\n", deadline_str(*task.next_deadline()));
+    if (task.repeat_rule()) {
+        if (task.next_deadline()) {
+            result += std::format("Next deadline: {}\n", deadline_str(*task.next_deadline()));
+        }
+        auto rr = *task.repeat_rule();
+        if (rr.end) {
+            result += std::format("Repeat ends: {}\n", deadline_str(*rr.end));
+        }
     }
     result += '\n' + completion_sign(task);
     return result;

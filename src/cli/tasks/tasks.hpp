@@ -35,6 +35,7 @@ class Tasks { // NOLINT
     bool _dirty = false;
 
     auto require_task(std::size_t index) -> Lines::Task *;
+    void enable_task_repeat_rule(Lines::Task &task);
 
     struct TaskOptionsFormats {
         std::string timepoint_format;

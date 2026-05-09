@@ -18,18 +18,16 @@
 using namespace Lines::ClientUtils;
 
 namespace {
-void enable_task_repeat_rule(Lines::Task &task, const std::string &rr) {
-    task.set_repeat_rule(Parsers::parse_repeat_rule(rr));
-    task.set_deadline(task.deadline().value_or(Lines::Temporal::LocalClock::now()));
-    task.advance_deadline();
-}
-
 void disable_task_repeat_rule(Lines::Task &task) { task.set_repeat_rule(std::nullopt); }
 void disable_task_deadline(Lines::Task &task) { task.set_deadline(std::nullopt); }
 
 void complete_or_advance_deadline(Lines::Task &task) {
     if (task.repeat_rule()) {
         task.advance_deadline();
+        // Disabling repeat rule when its end reached
+        if (!task.deadline()) {
+            task.set_repeat_rule(std::nullopt);
+        }
     } else {
         task.complete();
     }
@@ -180,9 +178,7 @@ void Lines::CLI::Tasks::addition_callback() {
     }
 
     try {
-        if (_options.repeat_rule) {
-            enable_task_repeat_rule(task, *_options.repeat_rule);
-        }
+        enable_task_repeat_rule(task);
     } catch (const std::invalid_argument &e) {
         throw ::CLI::ValidationError(e.what());
     }
@@ -225,7 +221,7 @@ void Lines::CLI::Tasks::editing_callback() {
         } else {
             try {
                 tmp.uncomplete();
-                enable_task_repeat_rule(tmp, *_options.repeat_rule);
+                enable_task_repeat_rule(tmp);
             } catch (const std::invalid_argument &e) {
                 throw ::CLI::ValidationError(e.what());
             }
@@ -272,7 +268,7 @@ void Lines::CLI::Tasks::deletion_callback() {
         std::cout << std::format("Task to delete:\nID: {}\n{}\n", tasks[0].id + 1,
                                  task_str_unfolded(*tasks[0].task));
     } else {
-        std::cout << "Lines::CLI::Tasks to delete:\n";
+        std::cout << "Tasks to delete:\n";
         for (const auto &task : tasks) {
             std::cout << std::format("{}. {}\n", task.id + 1, task_str(*task.task));
         }
@@ -354,6 +350,19 @@ void Lines::CLI::Tasks::add_task_options(::CLI::App &app, std::string_view desc_
                                formats.timepoint_format, formats.disabling_annot));
     app.add_option("-R,--repeat", _options.repeat_rule,
                    std::format("{} repeat rule{}", desc_prefix, formats.disabling_annot));
-    app.add_option("--repeat-end", _options.repeat_end,
+    app.add_option("--rend,--repeat-end", _options.repeat_end,
                    std::format("{} end of repeat{}", desc_prefix, formats.disabling_annot));
+}
+
+void Lines::CLI::Tasks::enable_task_repeat_rule(Lines::Task &task) {
+    Lines::TaskRepeatRule rr;
+    rr = Parsers::parse_repeat_rule(*_options.repeat_rule);
+    if (_options.repeat_end) {
+        rr.end = Parsers::parse_timepoint(*_options.repeat_end);
+    }
+    task.set_repeat_rule(rr);
+    if (!task.deadline()) {
+        task.set_deadline(Lines::Temporal::LocalClock::now());
+    }
+    task.advance_deadline();
 }
