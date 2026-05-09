@@ -12,11 +12,11 @@ void Lines::CLI::Docs::init(::CLI::App &app) {
 
     docs->callback([this]() -> void {
         if (manual == "repeat") {
-            std::cout << Lines::Manuals::repeat_manual << '\n';
+            std::cout << Manuals::repeat_manual << '\n';
             return;
         }
         if (manual == "timepoints") {
-            std::cout << Lines::Manuals::timepoints_manual << '\n';
+            std::cout << Manuals::timepoints_manual << '\n';
             return;
         }
     });

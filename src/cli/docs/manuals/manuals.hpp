@@ -2,7 +2,7 @@
 
 #include <string>
 
-namespace Lines::Manuals {
+namespace Lines::CLI::Manuals {
 static const std::string repeat_manual = R"(Task repeat rules.
 
 The difference between regular task and task with a repeat rule is that
@@ -26,7 +26,16 @@ Syntax:
            Weekday names:
            mon tue wed thu fri sat sun
 
-           Both can be combined in one rule, like "mon,wed.sat")";
+           Both can be combined in one rule, like "mon,wed.sat"
+
+You can define when a repeat rule should disappear from a task by using
+the "--repeat-end" (or "--rend") option. Its value is a time point.
+
+The repeat ends when the next deadline calculated by the repeat rule
+comes after the repeat end time.
+
+When the repeat ends, the repeat rule and the deadline are removed
+from the task.)";
 
 static const std::string timepoints_manual = R"(Time points.
 
@@ -71,4 +80,4 @@ To reduce cognitive load, lines-cli also highlights time points
 regarding to how much time left to them. Time points that were passed is highlighted in red color,
 if only 24 or less hours left until time point, it's highlight in yellow color, other time points
 highlight in green color)";
-} // namespace Lines::Manuals
+} // namespace Lines::CLI::Manuals
