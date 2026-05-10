@@ -101,8 +101,15 @@ void Lines::CLI::Tasks::completion_init(::CLI::App &app) {
     complete->require_option(1);
     uncomplete->require_option(1);
 
-    complete->callback([this]() -> void { complete_callback(); });
-    uncomplete->callback([this]() -> void { uncomplete_callback(); });
+    complete->callback([this]() -> void {
+        completion_callback([](auto &task) -> void { complete_or_advance_deadline(task); },
+                            [](const auto &task) -> bool { return task.completed(); }, "complete");
+    });
+    uncomplete->callback([this]() -> void {
+        completion_callback([](auto &task) -> void { task.uncomplete(); },
+                            [](const auto &task) -> bool { return !task.completed(); },
+                            "uncomplete");
+    });
 }
 
 void Lines::CLI::Tasks::init(::CLI::App &app) {
@@ -178,7 +185,9 @@ void Lines::CLI::Tasks::addition_callback() {
     }
 
     try {
-        enable_task_repeat_rule(task);
+        if (_options.repeat_rule) {
+            enable_task_repeat_rule(task);
+        }
     } catch (const std::invalid_argument &e) {
         throw ::CLI::ValidationError(e.what());
     }
@@ -242,7 +251,7 @@ void Lines::CLI::Tasks::showing_callback() {
     }
     auto tasks = filter(_storage, _options.tasks_filter_rule);
     if (tasks.empty()) {
-        std::cerr << "Seems like there's no tasks, take break ;)\n";
+        std::cerr << "Seems like there's no tasks\n";
         return;
     }
     if (tasks.size() == 1) {
@@ -283,58 +292,6 @@ void Lines::CLI::Tasks::deletion_callback() {
 
     for (const auto &task : std::ranges::reverse_view(tasks)) {
         _storage.erase(static_cast<std::ptrdiff_t>(task.id));
-    }
-    _dirty = true;
-}
-
-void Lines::CLI::Tasks::complete_callback() {
-    if (_options.tasks_filter_rule.id) {
-        --*_options.tasks_filter_rule.id;
-    }
-    auto tasks = filter(_storage, _options.tasks_filter_rule);
-    if (tasks.empty()) {
-        std::cerr << "ERROR: Task not found\n";
-        return;
-    }
-    if (tasks.size() == 1) {
-        auto task = tasks[0];
-        if (task.task->completed()) {
-            std::cerr << "ERROR: Task already completed\n";
-            return;
-        }
-        complete_or_advance_deadline(*task.task);
-        std::cout << std::format("ID: {}\n{}\n", task.id + 1, task_str_unfolded(*task.task));
-    } else {
-        for (const auto &task : tasks) {
-            complete_or_advance_deadline(*task.task);
-            std::cout << std::format("{}. {}\n", task.id + 1, task_str(*task.task));
-        }
-    }
-    _dirty = true;
-}
-
-void Lines::CLI::Tasks::uncomplete_callback() {
-    if (_options.tasks_filter_rule.id) {
-        --*_options.tasks_filter_rule.id;
-    }
-    auto tasks = filter(_storage, _options.tasks_filter_rule);
-    if (tasks.empty()) {
-        std::cerr << "ERROR: Task not found\n";
-        return;
-    }
-    if (tasks.size() == 1) {
-        auto task = tasks[0];
-        if (!task.task->completed()) {
-            std::cerr << "ERROR: Task not completed\n";
-            return;
-        }
-        task.task->uncomplete();
-        std::cout << std::format("ID: {}\n{}\n", task.id + 1, task_str_unfolded(*task.task));
-    } else {
-        for (const auto &task : tasks) {
-            task.task->uncomplete();
-            std::cout << std::format("{}. {}\n", task.id + 1, task_str(*task.task));
-        }
     }
     _dirty = true;
 }

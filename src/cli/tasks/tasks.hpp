@@ -1,8 +1,10 @@
+#include "client-utils/utils.hpp"
 #include "filter.hpp"
 #include "lines/tasks/task.hpp"
 #include "storages/tasks/json.hpp"
 #include "storages/utils/filesystem.hpp"
 
+#include <iostream>
 #include <string>
 
 namespace CLI {
@@ -26,7 +28,7 @@ class Tasks { // NOLINT
         std::optional<std::string> repeat_end;
         std::optional<std::size_t> repeat_times;
 
-        Lines::TasksFilterRule tasks_filter_rule;
+        TasksFilter::TasksFilterRule tasks_filter_rule;
     } _options;
     Lines::TasksJSONStorage _storage{Lines::detail::get_fs_home() / ".lines.d" / "saves" /
                                      "tasks.json"};
@@ -59,8 +61,43 @@ class Tasks { // NOLINT
     void editing_callback();
     void addition_callback();
     void deletion_callback();
-    void complete_callback();
-    void uncomplete_callback();
+    template <typename Fn, typename Pred>
+    void completion_callback(const Fn &fn, const Pred &restriction, std::string_view action_desc) {
+        if (_options.tasks_filter_rule.id) {
+            --*_options.tasks_filter_rule.id;
+        }
+        auto tasks = filter(_storage, _options.tasks_filter_rule);
+        if (tasks.empty()) {
+            std::cerr << "ERROR: Task not found\n";
+            return;
+        }
+        if (tasks.size() == 1) {
+            auto task = tasks[0];
+            auto tmp = *task.task;
+            if (restriction(tmp)) {
+                std::cerr << std::format("ERROR: Task already {}d\n", action_desc);
+                return;
+            }
+            fn(tmp);
+            std::cout << std::format("Task to {}:\nID: {}\n{}\n", action_desc, task.id + 1,
+                                     ClientUtils::task_str_unfolded(tmp));
+            if (ClientUtils::confirm()) {
+                fn(*task.task);
+            }
+        } else {
+            std::cout << std::format("Tasks to {}\n", action_desc);
+            for (const auto &task : tasks) {
+                std::cout << std::format("{}. {}\n", task.id + 1,
+                                         ClientUtils::task_str(*task.task));
+            }
+            if (ClientUtils::confirm()) {
+                for (const auto &task : tasks) {
+                    fn(*task.task);
+                }
+            }
+        }
+        _dirty = true;
+    }
 
   public:
     Tasks();

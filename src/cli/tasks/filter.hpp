@@ -8,6 +8,7 @@ namespace Lines {
 class TasksJSONStorage;
 class Task;
 
+namespace TasksFilter {
 struct TasksFilterRule {
     using TaskID = std::size_t;
     using TaskTag = std::string;
@@ -28,4 +29,11 @@ struct TasksFilterResult {
 auto has_tag(const Task &task, const std::string &tag) -> bool;
 auto filter(Lines::TasksJSONStorage &storage, const TasksFilterRule &rule)
     -> std::vector<TasksFilterResult>;
+template <typename Fn>
+void for_each_filter_result(const std::vector<TasksFilterResult> &vec, const Fn &fn) {
+    for (const auto &el : vec) {
+        fn(el);
+    }
+}
+} // namespace TasksFilter
 } // namespace Lines

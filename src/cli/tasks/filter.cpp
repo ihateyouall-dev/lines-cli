@@ -4,11 +4,11 @@
 
 #include <algorithm>
 
-auto Lines::has_tag(const Task &task, const std::string &tag) -> bool {
+auto Lines::TasksFilter::has_tag(const Task &task, const std::string &tag) -> bool {
     return std::ranges::find(task.tags(), tag) != task.tags().end();
 }
 
-auto Lines::filter(Lines::TasksJSONStorage &storage, const TasksFilterRule &rule)
+auto Lines::TasksFilter::filter(Lines::TasksJSONStorage &storage, const TasksFilterRule &rule)
     -> std::vector<TasksFilterResult> {
     std::vector<TasksFilterResult> result;
     if (rule.id) {
