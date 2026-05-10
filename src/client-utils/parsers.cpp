@@ -22,7 +22,7 @@
 
 void Lines::ClientUtils::Parsers::throw_range_error(std::string_view prefix,
                                                     std::string_view range_str) {
-    throw std::out_of_range(std::format("ERROR: {} can be only in range {}", prefix, range_str));
+    throw std::out_of_range(std::format("ERROR: {} must be in range {}", prefix, range_str));
 }
 
 namespace {
@@ -149,6 +149,12 @@ auto split_temporal_expression(const std::string &str) -> TemporalExprSplitResul
     return res;
 }
 
+auto days_in_month(Lines::Temporal::Month month) -> std::size_t {
+    static constexpr std::array<std::size_t, 12> days = {31, 28, 31, 30, 31, 30,
+                                                         31, 31, 30, 31, 30, 31};
+    return days[unsigned(month) - 1]; // NOLINT
+}
+
 auto parse_date_base(const std::string &str) -> Lines::Temporal::Date {
     auto base = to_lower_str(str);
 
@@ -181,8 +187,17 @@ auto parse_date_base(const std::string &str) -> Lines::Temporal::Date {
     if (!t_month.ok()) {
         Lines::ClientUtils::Parsers::throw_range_error("Month", "[1;12]");
     }
-    if (!t_day.ok()) {
-        Lines::ClientUtils::Parsers::throw_range_error("Day", "[1;31]");
+    std::size_t max_days = days_in_month(t_month);
+    if (t_year.is_leap() && t_month == Lines::Temporal::Month{2}) {
+        ++max_days;
+    }
+    if (unsigned(t_day) > max_days) {
+        static constexpr std::array<std::string, 12> month_str{
+            "january", "february", "march",     "april",   "may",      "june",
+            "july",    "august",   "september", "october", "november", "december"};
+        Lines::ClientUtils::Parsers::throw_range_error(
+            std::format("Day in {} of {}", month_str[unsigned(t_month) - 1], int(t_year)), // NOLINT
+            std::format("[1;{}]", max_days));
     }
 
     return {t_year, t_month, t_day};
