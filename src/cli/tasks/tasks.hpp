@@ -62,7 +62,10 @@ class Tasks { // NOLINT
     void addition_callback();
     void deletion_callback();
     template <typename Fn, typename Pred>
-    void completion_callback(const Fn &fn, const Pred &restriction, std::string_view action_desc) {
+    void completion_callback(
+        const Fn &fn /* action to do with tasks */,
+        const Pred &restriction /* boolean predicate, if returns true - callback stops */,
+        std::string_view action_desc) {
         if (_options.tasks_filter_rule.id) {
             --*_options.tasks_filter_rule.id;
         }
@@ -81,7 +84,7 @@ class Tasks { // NOLINT
             fn(tmp);
             std::cout << std::format("Task to {}:\nID: {}\n{}\n", action_desc, task.id + 1,
                                      ClientUtils::task_str_unfolded(tmp));
-            if (ClientUtils::confirm()) {
+            if (_options.force || ClientUtils::confirm()) {
                 fn(*task.task);
             }
         } else {
@@ -90,7 +93,7 @@ class Tasks { // NOLINT
                 std::cout << std::format("{}. {}\n", task.id + 1,
                                          ClientUtils::task_str(*task.task));
             }
-            if (ClientUtils::confirm()) {
+            if (_options.force || ClientUtils::confirm()) {
                 for (const auto &task : tasks) {
                     fn(*task.task);
                 }

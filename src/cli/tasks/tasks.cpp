@@ -21,7 +21,7 @@ namespace {
 void disable_task_repeat_rule(Lines::Task &task) { task.set_repeat_rule(std::nullopt); }
 void disable_task_deadline(Lines::Task &task) { task.set_deadline(std::nullopt); }
 
-void complete_or_advance_deadline(Lines::Task &task) {
+void complete_or_advance_deadline(Lines::Task &task) { // NOLINT
     if (task.repeat_rule()) {
         task.advance_deadline();
         // Disabling repeat rule when its end reached
@@ -81,9 +81,9 @@ void Lines::CLI::Tasks::deletion_init(::CLI::App &app) {
 
     add_filter_options(*delete_app, "Delete");
 
-    delete_app->require_option(1);
+    delete_app->get_option_group("filters")->require_option(1, 0);
 
-    delete_app->add_flag("-f,--force", _options.force, "Force deletion");
+    add_force_flag(*delete_app, "deletion");
 
     delete_app->callback([this]() -> void { deletion_callback(); });
 }
@@ -98,8 +98,8 @@ void Lines::CLI::Tasks::completion_init(::CLI::App &app) {
     add_force_flag(*complete, "completion");
     add_force_flag(*uncomplete, "uncompletion");
 
-    complete->require_option(1);
-    uncomplete->require_option(1);
+    complete->get_option_group("filters")->require_option(1, 0);
+    uncomplete->get_option_group("filters")->require_option(1, 0);
 
     complete->callback([this]() -> void {
         completion_callback([](auto &task) -> void { complete_or_advance_deadline(task); },
@@ -236,9 +236,8 @@ void Lines::CLI::Tasks::editing_callback() {
             }
         }
     }
-    std::cout << std::format("Edited task:\n{}", task_str_unfolded(tmp));
-    bool confirmed = confirm();
-    if (!confirmed) {
+    std::cout << std::format("Edited task:\n{}\n", task_str_unfolded(tmp));
+    if (!_options.force && !confirm()) {
         return;
     }
     *task = tmp;
