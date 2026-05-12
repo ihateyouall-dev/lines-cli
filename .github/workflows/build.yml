@@ -15,9 +15,15 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
+
+      - name: Install deps
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libre2-dev libcli11-dev nlohmann-json3-dev
+
       - name: Install libc++
         if: matrix.preset == 'debug-clang'
-        run: | 
+        run: |
           sudo apt-get update
           sudo apt-get install -y libc++-dev libc++abi-dev
 
@@ -34,6 +40,10 @@ jobs:
 
     steps:
       - uses: actions/checkout@v6
+
+      - name: Install deps
+        run: |
+          brew install re2 cli11 nlohmann-json
 
       - name: Configure
         run: cmake --preset debug-clang
