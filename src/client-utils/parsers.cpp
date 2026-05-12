@@ -8,6 +8,7 @@
 #include "lines/temporal/duration.hpp"
 #include "lines/temporal/timepoint.hpp"
 #include "lines/temporal/ymd.hpp"
+#include "re2/re2.h"
 
 #include <algorithm>
 #include <cassert>

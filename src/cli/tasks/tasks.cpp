@@ -1,6 +1,6 @@
 #include "cli/tasks/tasks.hpp"
 
-#include "CLI/CLI11.hpp"
+#include "CLI/CLI.hpp"
 #include "client-utils/parsers.hpp"
 #include "client-utils/utils.hpp"
 #include "lines/tasks/task.hpp"

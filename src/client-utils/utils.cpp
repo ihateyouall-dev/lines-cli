@@ -3,6 +3,7 @@
 #include "client-utils/colors.hpp"
 #include "lines/temporal/clocks.hpp"
 
+#include <cassert>
 #include <format>
 #include <iostream>
 

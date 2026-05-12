@@ -1,4 +1,4 @@
-#include "CLI/CLI11.hpp"
+#include "CLI/CLI.hpp"
 #include "cli/docs/docs.hpp"
 #include "cli/tasks/tasks.hpp"
 

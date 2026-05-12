@@ -1,6 +1,6 @@
 #include "cli/docs/docs.hpp"
 
-#include "CLI/CLI11.hpp"
+#include "CLI/CLI.hpp"
 #include "manuals/manuals.hpp"
 
 void Lines::CLI::Docs::init(::CLI::App &app) {
