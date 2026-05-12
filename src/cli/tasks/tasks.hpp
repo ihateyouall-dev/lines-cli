@@ -23,25 +23,25 @@ class Tasks { // NOLINT
 
         bool force = false;
 
-        // Options for repeat rules, repeat_end and repeat_times cannot be given both at one time
         std::optional<std::string> repeat_rule;
         std::optional<std::string> repeat_end;
-        std::optional<std::size_t> repeat_times;
 
         TasksFilter::TasksFilterRule tasks_filter_rule;
     } _options;
     Lines::TasksJSONStorage _storage{Lines::detail::get_fs_home() / ".lines.d" / "saves" /
                                      "tasks.json"};
     std::string timepoint_format = "YYYY/MM/DD[_HH:MM[:SS]]";
+    const std::string disable = "none"; // NOLINT
 
     bool _dirty = false;
 
     auto require_task(std::size_t index) -> Lines::Task *;
     void enable_task_repeat_rule(Lines::Task &task);
+    void enable_task_repeat_end(Lines::Task &task);
 
     struct TaskOptionsFormats {
         std::string timepoint_format;
-        // Message like "Enter 0 to disable something" in editing
+        // Message like "Enter "none" to disable something" in editing
         std::string disabling_annot;
     };
     void add_task_options(::CLI::App &app, std::string_view desc_prefix, // NOLINT
@@ -107,7 +107,6 @@ class Tasks { // NOLINT
     Tasks(const Tasks &) = default;
     Tasks(Tasks &&) = delete;
 
-    auto operator=(const Tasks &) -> Tasks & = default;
     auto operator=(Tasks &&) -> Tasks & = delete;
 
     void init(::CLI::App &app);

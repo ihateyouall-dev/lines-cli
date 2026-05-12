@@ -19,6 +19,15 @@ using namespace Lines::ClientUtils;
 
 namespace {
 void disable_task_repeat_rule(Lines::Task &task) { task.set_repeat_rule(std::nullopt); }
+void disable_task_repeat_end(Lines::Task &task) {
+    if (!task.repeat_rule() || !task.repeat_rule()->end) {
+        throw std::logic_error(
+            "ERROR: Cannot disable repeat end from task without repeat rule or repeat end");
+    }
+    auto rr = *task.repeat_rule();
+    rr.end = std::nullopt;
+    task.set_repeat_rule(rr);
+}
 void disable_task_deadline(Lines::Task &task) { task.set_deadline(std::nullopt); }
 
 void complete_or_advance_deadline(Lines::Task &task) { // NOLINT
@@ -30,6 +39,14 @@ void complete_or_advance_deadline(Lines::Task &task) { // NOLINT
         }
     } else {
         task.complete();
+    }
+}
+
+template <typename Fn> void with_validation(const Fn &fn) {
+    try {
+        fn();
+    } catch (const std::exception &e) {
+        throw CLI::ValidationError(e.what());
     }
 }
 } // namespace
@@ -70,7 +87,7 @@ void Lines::CLI::Tasks::editing_init(::CLI::App &app) {
 
     add_task_options(*edit, "Give task a new",
                      TaskOptionsFormats{.timepoint_format = timepoint_format,
-                                        .disabling_annot = ". Enter \'0\' to disable it"});
+                                        .disabling_annot = ". Enter \'none\' to disable it"});
     add_force_flag(*edit, "editing");
 
     edit->callback([this]() -> void { editing_callback(); });
@@ -141,16 +158,17 @@ void Lines::CLI::Tasks::add_filter_options(::CLI::App &app, std::string_view des
     filters->add_option("-A,--all-tags", _options.tasks_filter_rule.all_tags,
                         std::format("{} only tasks that have all of given tags", desc_prefix));
     // Time point specific filters
-    filters->add_option_function<std::string>(
-        "-D,--deadline",
-        [this](const std::string &date) -> void {
-            try {
-                _options.tasks_filter_rule.deadline = Parsers::parse_timepoint(date);
-            } catch (std::invalid_argument &e) {
-                throw ::CLI::ValidationError(e.what());
-            }
-        },
-        std::format("{} task with given deadline (format: YYYY.MM.DD_[HH:MM[:SS]])", desc_prefix));
+    filters
+        ->add_option_function<std::string>(
+            "-D,--deadline",
+            [this](const std::string &date) -> void {
+                with_validation([&]() -> void {
+                    _options.tasks_filter_rule.deadline = Parsers::parse_timepoint(date);
+                });
+            },
+            std::format("{} task with given deadline (format: YYYY.MM.DD_[HH:MM[:SS]])",
+                        desc_prefix))
+        ->type_name("TIMEPOINT");
 
     auto active_callback = [this](bool b) { // NOLINT
         return [this, b]() -> void {
@@ -170,27 +188,25 @@ void Lines::CLI::Tasks::add_force_flag(::CLI::App &app, std::string_view desc_po
 
 void Lines::CLI::Tasks::addition_callback() {
     if (!_options.title) {
-        throw ::CLI::ValidationError("Added task title cannot be empty");
+        throw ::CLI::ValidationError("ERROR: Task title cannot be empty");
     }
 
     Lines::Task task{Lines::TaskInfo{*_options.title, _options.description,
                                      _options.tags.value_or(std::vector<std::string>{})}};
 
-    try {
+    with_validation([&]() -> void {
         if (_options.deadline) {
             task.set_deadline(Parsers::parse_timepoint(*_options.deadline));
         }
-    } catch (const std::exception &e) {
-        throw ::CLI::ValidationError(e.what());
-    }
 
-    try {
         if (_options.repeat_rule) {
             enable_task_repeat_rule(task);
         }
-    } catch (const std::invalid_argument &e) {
-        throw ::CLI::ValidationError(e.what());
-    }
+
+        if (_options.repeat_end) {
+            enable_task_repeat_end(task);
+        }
+    });
 
     std::size_t id = _storage.size();
     std::cout << std::format("Added task:\nID: {}\n{}\n", id + 1, task_str_unfolded(task));
@@ -214,26 +230,28 @@ void Lines::CLI::Tasks::editing_callback() {
         tmp.set_tags(*_options.tags);
     }
     if (_options.deadline) {
-        if (*_options.deadline == "0") {
+        if (*_options.deadline == disable) {
             disable_task_deadline(tmp);
         } else {
-            try {
-                tmp.set_deadline(Parsers::parse_timepoint(*_options.deadline));
-            } catch (const std::exception &e) {
-                throw ::CLI::ValidationError(e.what());
-            }
+            with_validation(
+                [&]() -> void { tmp.set_deadline(Parsers::parse_timepoint(*_options.deadline)); });
         }
     }
     if (_options.repeat_rule) {
-        if (_options.repeat_rule == "0") {
+        if (_options.repeat_rule == disable) {
             disable_task_repeat_rule(tmp);
         } else {
-            try {
+            with_validation([&]() -> void {
                 tmp.uncomplete();
                 enable_task_repeat_rule(tmp);
-            } catch (const std::invalid_argument &e) {
-                throw ::CLI::ValidationError(e.what());
-            }
+            });
+        }
+    }
+    if (_options.repeat_end) {
+        if (*_options.repeat_end == disable) {
+            with_validation([&]() -> void { disable_task_repeat_end(tmp); });
+        } else {
+            with_validation([&]() -> void { enable_task_repeat_end(tmp); });
         }
     }
     std::cout << std::format("Edited task:\n{}\n", task_str_unfolded(tmp));
@@ -303,22 +321,31 @@ void Lines::CLI::Tasks::add_task_options(::CLI::App &app, std::string_view desc_
 
     app.add_option("-D,--deadline", _options.deadline,
                    std::format("{} planned deadline. Format: {}{}", desc_prefix,
-                               formats.timepoint_format, formats.disabling_annot));
+                               formats.timepoint_format, formats.disabling_annot))
+        ->type_name("TIMEPOINT");
     app.add_option("-R,--repeat", _options.repeat_rule,
-                   std::format("{} repeat rule{}", desc_prefix, formats.disabling_annot));
+                   std::format("{} repeat rule{}", desc_prefix, formats.disabling_annot))
+        ->type_name("REPEAT RULE");
     app.add_option("--rend,--repeat-end", _options.repeat_end,
-                   std::format("{} end of repeat{}", desc_prefix, formats.disabling_annot));
+                   std::format("{} end of repeat{}", desc_prefix, formats.disabling_annot))
+        ->type_name("TIMEPOINT");
 }
 
 void Lines::CLI::Tasks::enable_task_repeat_rule(Lines::Task &task) {
     Lines::TaskRepeatRule rr;
     rr = Parsers::parse_repeat_rule(*_options.repeat_rule);
-    if (_options.repeat_end) {
-        rr.end = Parsers::parse_timepoint(*_options.repeat_end);
-    }
     task.set_repeat_rule(rr);
     if (!task.deadline()) {
         task.set_deadline(Lines::Temporal::LocalClock::now());
     }
     task.advance_deadline();
+}
+
+void Lines::CLI::Tasks::enable_task_repeat_end(Lines::Task &task) {
+    if (!task.repeat_rule()) {
+        throw std::logic_error("ERROR: Cannot give repeat end to task without repeat rule");
+    }
+    Lines::TaskRepeatRule rr = *task.repeat_rule();
+    rr.end = Lines::ClientUtils::Parsers::parse_timepoint(*_options.repeat_end);
+    task.set_repeat_rule(rr);
 }
