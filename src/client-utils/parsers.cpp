@@ -14,7 +14,7 @@
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
-#include <regex>
+#include <re2/re2.h>
 #include <stdexcept>
 #include <string>
 #include <string_view>
@@ -352,6 +352,15 @@ auto parse_repeat_weekdays(std::string str) -> std::vector<Lines::Temporal::Week
     }
     return res;
 }
+
+auto re2_icase() -> const re2::RE2::Options & {
+    static const re2::RE2::Options opts = []() -> re2::RE2::Options {
+        re2::RE2::Options res;
+        res.set_case_sensitive(false);
+        return res;
+    }();
+    return opts;
+}
 } // namespace
 
 namespace Lines::ClientUtils::Parsers {
@@ -377,9 +386,10 @@ auto parse_time_nv(const std::string &str) -> Lines::Temporal::Timestamp {
 }
 
 auto parse_date(const std::string &str) -> Lines::Temporal::Date {
-    static const std::regex date_regex(
-        R"(^(\d{4}/\d{2}/\d{2}|today|tomorrow|yesterday)([+-]\d+[ymwd])*$)", std::regex::icase);
-    if (!std::regex_match(str, date_regex)) {
+    static const re2::RE2 date_regex(
+        R"(^(\d{4}/\d{2}/\d{2}|today|tomorrow|yesterday)([+-]\d+[ymwd])*$)", re2_icase());
+
+    if (!re2::RE2::FullMatch(str, date_regex)) {
         throw std::invalid_argument(
             R"(ERROR: Unknown date format.
 Supported date formats:
@@ -401,10 +411,9 @@ Operators:
 }
 
 auto parse_time(const std::string &str) -> Lines::Temporal::Timestamp {
-    static const std::regex time_regex(R"(^(\d{2}:\d{2}(:\d{2})?|now)([+-]\d+[hms])*$)",
-                                       std::regex::icase);
+    static const re2::RE2 time_regex(R"(^(\d{2}:\d{2}(:\d{2})?|now)([+-]\d+[hms])*$)", re2_icase());
 
-    if (!std::regex_match(str, time_regex)) {
+    if (!re2::RE2::FullMatch(str, time_regex)) {
         throw std::invalid_argument(
             R"(ERROR: Unknown time format.
 Supported time formats:
@@ -459,21 +468,19 @@ auto parse_timepoint(const std::string &str) -> Lines::Temporal::TimePoint {
 }
 
 auto parse_repeat_rule(const std::string &str) -> Lines::TaskRepeatRule {
-    static const std::regex every_unit_regex(R"(^(\d+)(y|mo|w|d|h|m|s)$)", std::regex::icase);
-    static const std::regex every_weekday_regex(
-        R"(^((mon|tue|wed|thu|fri|sat|sun)[,.])*(mon|tue|wed|thu|fri|sat|sun)$)",
-        std::regex::icase);
+    static const re2::RE2 every_unit_regex(R"(^(\d+)(y|mo|w|d|h|m|s)$)", re2_icase());
+    static const re2::RE2 every_weekday_regex(
+        R"(^((mon|tue|wed|thu|fri|sat|sun)[,.])*(mon|tue|wed|thu|fri|sat|sun)$)", re2_icase());
 
-    std::smatch groups;
-    if (std::regex_match(str, groups, every_unit_regex)) {
-        std::size_t val = static_cast<std::size_t>(std::stoi(groups[1]));
-        std::string unit = groups[2];
+    std::size_t val{};
+    std::string unit;
+    if (re2::RE2::FullMatch(str, every_unit_regex, &val, &unit)) {
         Lines::TaskRepeatRule res;
         res.repeat_type = Lines::TaskRepeat::EveryUnit{.interval = parse_repeat_interval(val, unit),
                                                        .unit_str = unit};
         return res;
     }
-    if (!std::regex_match(str, every_weekday_regex)) {
+    if (!re2::RE2::FullMatch(str, every_weekday_regex)) {
         throw std::invalid_argument(R"(ERROR: Invalid repeat rule format. Formats:
 <N>unit     (e.g. "3d" repeats every 3 days)
 wd1,wd2.wd3 (e.g. "mon,wed.sun" repeats on monday and from wednesday to sunday
