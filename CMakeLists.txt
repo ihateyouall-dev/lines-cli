@@ -8,18 +8,17 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 option(LINES_ENABLE_TESTING "Build tests" OFF)
 
 if(MSVC)
-  # MSVC historically reports __cplusplus as 199711L,
-  # so forcing it to report correct value
+  # MSVC historically reports __cplusplus as 199711L, so forcing it to report
+  # correct value
   add_compile_options(/Zc:__cplusplus)
 endif()
 
 add_executable(${PROJECT_NAME} src/main.cpp)
 
 add_subdirectory(src)
-
 target_link_libraries(${PROJECT_NAME} PRIVATE Lines::CLI::Root)
 
-if (LINES_ENABLE_TESTING)
+if(LINES_ENABLE_TESTING)
   enable_testing()
   add_subdirectory(tests)
 endif()

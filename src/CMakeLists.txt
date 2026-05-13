@@ -1,27 +1,8 @@
 include(FetchContent)
 
-option(LINES_USE_SYSTEM_PACKAGES "Use system packages instead of FetchContent"
-       OFF)
-
-if(LINES_USE_SYSTEM_PACKAGES)
-  find_package(re2 REQUIRED)
-  find_package(CLI11 REQUIRED)
-  find_package(nlohmann_json REQUIRED)
-else()
-  FetchContent_Declare(
-    re2
-    GIT_REPOSITORY https://github.com/google/re2
-    GIT_TAG 2025-11-05)
-  FetchContent_Declare(
-    CLI11
-    GIT_REPOSITORY https://github.com/CLIUtils/CLI11
-    GIT_TAG v2.6.2)
-  FetchContent_Declare(
-    nlohmann_json
-    GIT_REPOSITORY https://github.com/nlohmann/json
-    GIT_TAG v3.12.0)
-  FetchContent_MakeAvailable(re2 CLI11 nlohmann_json)
-endif()
+find_package(re2 CONFIG REQUIRED)
+find_package(CLI11 CONFIG REQUIRED)
+find_package(nlohmann_json CONFIG REQUIRED)
 
 FetchContent_Declare(
   Lines

@@ -6,12 +6,12 @@
             "displayName": "Debug configuration (Clang libc++)",
             "generator": "Ninja",
             "binaryDir": "build/debug/clang",
+            "toolchainFile": "${sourceDir}/build/conan_toolchain.cmake",
             "cacheVariables": {
                 "CMAKE_BUILD_TYPE": "Debug",
                 "CMAKE_CXX_COMPILER": "clang++",
                 "CMAKE_CXX_FLAGS_INIT": "-stdlib=libc++",
-                "LINES_ENABLE_TESTING": "ON",
-                "LINES_USE_SYSTEM_PACKAGES": "ON"
+                "LINES_ENABLE_TESTING": "ON"
             }
         },
         {
@@ -19,11 +19,11 @@
             "displayName": "Release configuration (Clang libc++)",
             "generator": "Ninja",
             "binaryDir": "build/release/clang",
+            "toolchainFile": "${sourceDir}/build/conan_toolchain.cmake",
             "cacheVariables": {
                 "CMAKE_BUILD_TYPE": "Release",
                 "CMAKE_CXX_COMPILER": "clang++",
-                "CMAKE_CXX_FLAGS_INIT": "-stdlib=libc++",
-                "LINES_USE_SYSTEM_PACKAGES": "ON"
+                "CMAKE_CXX_FLAGS_INIT": "-stdlib=libc++"
             }
         },
         {
@@ -31,11 +31,11 @@
             "displayName": "Debug configuration (GCC libstdc++)",
             "generator": "Ninja",
             "binaryDir": "build/debug/gcc",
+            "toolchainFile": "${sourceDir}/build/conan_toolchain.cmake",
             "cacheVariables": {
                 "CMAKE_BUILD_TYPE": "Debug",
                 "CMAKE_CXX_COMPILER": "g++",
-                "LINES_ENABLE_TESTING": "ON",
-                "LINES_USE_SYSTEM_PACKAGES": "ON"
+                "LINES_ENABLE_TESTING": "ON"
             }
         },
         {
@@ -43,10 +43,10 @@
             "displayName": "Release configuration (GCC libstdc++)",
             "generator": "Ninja",
             "binaryDir": "build/release/gcc",
+            "toolchainFile": "${sourceDir}/build/conan_toolchain.cmake",
             "cacheVariables": {
                 "CMAKE_BUILD_TYPE": "Release",
-                "CMAKE_CXX_COMPILER": "g++",
-                "LINES_USE_SYSTEM_PACKAGES": "ON"
+                "CMAKE_CXX_COMPILER": "g++"
             }
         },
         {
@@ -54,10 +54,10 @@
             "displayName": "Debug configuration (MSVC)",
             "generator": "Ninja",
             "binaryDir": "build/debug/msvc",
+            "toolchainFile": "${sourceDir}/build/conan_toolchain.cmake",
             "cacheVariables": {
                 "CMAKE_BUILD_TYPE": "Debug",
-                "CMAKE_CXX_COMPILER": "cl",
-                "LINES_ENABLE_TESTING": "ON"
+                "CMAKE_CXX_COMPILER": "cl"
             }
         },
         {
@@ -65,6 +65,7 @@
             "displayName": "Release configuration (MSVC)",
             "generator": "Ninja",
             "binaryDir": "build/release/msvc",
+            "toolchainFile": "${sourceDir}/build/conan_toolchain.cmake",
             "cacheVariables": {
                 "CMAKE_BUILD_TYPE": "Release",
                 "CMAKE_CXX_COMPILER": "cl"
@@ -81,8 +82,7 @@
                     "--coverage -fno-inline -fno-inline-small-functions -fno-default-inline -fno-elide-constructors",
                 "CMAKE_CXX_COMPILER": "g++",
                 "CMAKE_EXE_LINKER_FLAGS": "--coverage",
-                "LINES_ENABLE_TESTING": "ON",
-                "LINES_USE_SYSTEM_PACKAGES": "ON"
+                "LINES_ENABLE_TESTING": "ON"
             }
         }
     ],
