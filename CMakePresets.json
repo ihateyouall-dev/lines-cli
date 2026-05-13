@@ -52,7 +52,7 @@
         {
             "name": "debug-msvc",
             "displayName": "Debug configuration (MSVC)",
-            "generator": "Ninja",
+            "generator": "Visual Studio 17 2022",
             "binaryDir": "build/debug/msvc",
             "toolchainFile": "${sourceDir}/build/conan_toolchain.cmake",
             "cacheVariables": {
@@ -63,7 +63,7 @@
         {
             "name": "release-msvc",
             "displayName": "Release configuration (MSVC)",
-            "generator": "Ninja",
+            "generator": "Visual Studio 17 2022",
             "binaryDir": "build/release/msvc",
             "toolchainFile": "${sourceDir}/build/conan_toolchain.cmake",
             "cacheVariables": {
