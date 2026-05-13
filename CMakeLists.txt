@@ -25,3 +25,7 @@ if(LINES_ENABLE_TESTING)
   enable_testing()
   add_subdirectory(tests)
 endif()
+
+include(GNUInstallDirs)
+
+install(TARGETS lines-cli RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
