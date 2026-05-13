@@ -2,6 +2,7 @@
 
 #include "lines/temporal/timepoint.hpp"
 
+#include <re2/re2.h>
 #include <vector>
 
 namespace Lines {
@@ -19,6 +20,8 @@ struct TasksFilterRule {
     std::optional<Lines::Temporal::TimePoint> deadline;
     std::optional<bool> active_bool;
     std::optional<Lines::Temporal::TimePoint> active_deadline;
+    std::optional<re2::RE2> title_regex;
+    std::optional<re2::RE2> partial_title_regex;
 };
 struct TasksFilterResult {
     using TaskID = std::size_t;

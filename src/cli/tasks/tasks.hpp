@@ -104,7 +104,6 @@ class Tasks { // NOLINT
 
   public:
     Tasks();
-    Tasks(const Tasks &) = default;
     Tasks(Tasks &&) = delete;
 
     auto operator=(Tasks &&) -> Tasks & = delete;

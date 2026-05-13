@@ -49,6 +49,13 @@ template <typename Fn> void with_validation(const Fn &fn) {
         throw CLI::ValidationError(e.what());
     }
 }
+
+void validate_regex(std::string_view regex) {
+    re2::RE2 r{regex, re2::RE2::Quiet};
+    if (!r.ok()) {
+        throw std::invalid_argument(std::format("REGEX ERROR: {}", r.error()));
+    }
+}
 } // namespace
 
 Lines::CLI::Tasks::Tasks() { _storage.load_from_file(); }; // NOLINT
@@ -149,6 +156,30 @@ void Lines::CLI::Tasks::add_filter_options(::CLI::App &app, std::string_view des
     auto *filters = app.add_option_group("filters");
     filters->add_option("-i,--id", _options.tasks_filter_rule.id,
                         std::format("{} task with given id", desc_prefix));
+    filters
+        ->add_option_function<std::string>(
+            "--title",
+            [this](const std::string &regex) -> void {
+                with_validation([&]() -> void {
+                    validate_regex(regex);
+                    _options.tasks_filter_rule.title_regex.emplace(regex);
+                });
+            },
+            std::format("{} tasks whose titles matches given regular expression", desc_prefix))
+        ->type_name("REGEX");
+    filters
+        ->add_option_function<std::string>(
+            "--title-p",
+            [this](const std::string &regex) -> void {
+                with_validation([&]() -> void {
+                    validate_regex(regex);
+                    _options.tasks_filter_rule.partial_title_regex.emplace(regex);
+                });
+            },
+            std::format("{} tasks whose titles partially matches given regular expression",
+                        desc_prefix))
+        ->type_name("REGEX");
+
     filters->add_flag("-a,--all", _options.tasks_filter_rule.all,
                       std::format("{} all tasks", desc_prefix));
     // Tag specific filters
