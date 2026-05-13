@@ -192,7 +192,7 @@ auto parse_date_base(const std::string &str) -> Lines::Temporal::Date {
         ++max_days;
     }
     if (unsigned(t_day) > max_days) {
-        static constexpr std::array<std::string, 12> month_str{
+        static const std::array<std::string, 12> month_str{
             "January", "February", "March",     "April",   "May",      "June",
             "July",    "August",   "September", "October", "November", "December"};
         Lines::ClientUtils::Parsers::throw_range_error(
