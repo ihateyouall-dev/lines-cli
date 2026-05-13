@@ -21,6 +21,19 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y libc++-dev libc++abi-dev
 
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install Conan
+        run: pip install conan --break-system-packages
+
+      - name: Detect profile
+        run: conan profile detect --force
+
+      - name: Install deps
+        run: make install-deps-debug
+
       - name: Configure
         run: cmake --preset ${{ matrix.preset }}
 
@@ -34,6 +47,19 @@ jobs:
 
     steps:
       - uses: actions/checkout@v6
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install Conan
+        run: pip install conan --break-system-packages
+
+      - name: Detect profile
+        run: conan profile detect --force
+
+      - name: Install deps
+        run: make install-deps-debug
 
       - name: Configure
         run: cmake --preset debug-clang
@@ -51,6 +77,19 @@ jobs:
 
       - name: Setup MSVC
         uses: ilammy/msvc-dev-cmd@0b201ec74fa43914dc39ae48a89fd1d8cb592756
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install Conan
+        run: pip install conan --break-system-packages
+
+      - name: Detect profile
+        run: conan profile detect --force
+
+      - name: Install deps
+        run: make install-deps-debug
 
       - name: Configure
         run: cmake --preset debug-msvc
