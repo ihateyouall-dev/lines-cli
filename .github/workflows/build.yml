@@ -10,7 +10,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        preset: [debug-gcc, debug-clang]
+        preset: [ debug-gcc, debug-clang ]
 
     steps:
       - uses: actions/checkout@v6
@@ -32,7 +32,12 @@ jobs:
         run: conan profile detect --force
 
       - name: Install deps
-        run: make install-deps-debug
+        if: matrix.preset == 'debug-gcc'
+        run: make install-deps CONAN_BUILD_TYPE=Debug CONAN_CXX=gcc CONAN_LIBCXX=libstdc++
+
+      - name: Install deps
+        if: matrix.preset == 'debug-clang'
+        run: make install-deps CONAN_BUILD_TYPE=Debug
 
       - name: Configure
         run: cmake --preset ${{ matrix.preset }}
@@ -59,7 +64,7 @@ jobs:
         run: conan profile detect --force
 
       - name: Install deps
-        run: make install-deps-debug
+        run: make install-deps CONAN_BUILD_TYPE=Debug CONAN_CXX=apple-clang
 
       - name: Configure
         run: cmake --preset debug-clang
@@ -89,7 +94,7 @@ jobs:
         run: conan profile detect --force
 
       - name: Install deps
-        run: make install-deps-debug
+        run: make install-deps CONAN_BUILD_TYPE=Debug CONAN_CXX=msvc
 
       - name: Configure
         run: cmake --preset debug-msvc
