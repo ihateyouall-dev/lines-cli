@@ -33,7 +33,7 @@ jobs:
 
       - name: Install deps
         if: matrix.preset == 'debug-gcc'
-        run: make install-deps CONAN_BUILD_TYPE=Debug CONAN_CXX=gcc CONAN_LIBCXX=libstdc++
+        run: make install-deps CONAN_BUILD_TYPE=Debug
 
       - name: Install deps
         if: matrix.preset == 'debug-clang'
@@ -64,7 +64,7 @@ jobs:
         run: conan profile detect --force
 
       - name: Install deps
-        run: make install-deps CONAN_BUILD_TYPE=Debug CONAN_CXX=apple-clang
+        run: make install-deps CONAN_BUILD_TYPE=Debug
 
       - name: Configure
         run: cmake --preset debug-clang
@@ -94,7 +94,7 @@ jobs:
         run: conan profile detect --force
 
       - name: Install deps
-        run: make install-deps CONAN_BUILD_TYPE=Debug CONAN_CXX=msvc
+        run: make install-deps CONAN_BUILD_TYPE=Debug
 
       - name: Configure
         run: cmake --preset debug-msvc
