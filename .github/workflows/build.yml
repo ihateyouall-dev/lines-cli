@@ -18,6 +18,14 @@ jobs:
       - name: Install Conan
         run: pip install conan --break-system-packages
 
+      - name: Cache Conan
+        uses: actions/cache@v4
+        with:
+          path: ~/.conan2
+          key: conan-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('conanfile.txt') }}
+          restore-keys: |
+            conan-${{ runner.os }}-${{ runner.arch }}-
+
       - name: Detect profile
         run: conan profile detect --force
 
@@ -44,6 +52,14 @@ jobs:
 
       - name: Install Conan
         run: pip install conan --break-system-packages
+
+      - name: Cache Conan
+        uses: actions/cache@v4
+        with:
+          path: ~/.conan2
+          key: conan-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('conanfile.txt') }}
+          restore-keys: |
+            conan-${{ runner.os }}-${{ runner.arch }}-
 
       - name: Detect profile
         run: conan profile detect --force
@@ -74,6 +90,14 @@ jobs:
 
       - name: Install Conan
         run: pip install conan --break-system-packages
+
+      - name: Cache Conan
+        uses: actions/cache@v4
+        with:
+          path: ~/.conan2
+          key: conan-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('conanfile.txt') }}
+          restore-keys: |
+            conan-${{ runner.os }}-${{ runner.arch }}-
 
       - name: Detect profile
         run: conan profile detect --force
