@@ -28,7 +28,12 @@ void disable_task_repeat_end(Lines::Task &task) {
     rr.end = std::nullopt;
     task.set_repeat_rule(rr);
 }
-void disable_task_deadline(Lines::Task &task) { task.set_deadline(std::nullopt); }
+void disable_task_deadline(Lines::Task &task) {
+    if (task.repeat_rule()) {
+        throw std::logic_error("ERROR: Cannot disable deadline from task with repeat rule");
+    }
+    task.set_deadline(std::nullopt);
+}
 
 void complete_or_advance_deadline(Lines::Task &task) { // NOLINT
     if (task.repeat_rule()) {
@@ -262,7 +267,7 @@ void Lines::CLI::Tasks::editing_callback() {
     }
     if (_options.deadline) {
         if (*_options.deadline == disable) {
-            disable_task_deadline(tmp);
+            with_validation([&]() -> void { disable_task_deadline(tmp); });
         } else {
             with_validation(
                 [&]() -> void { tmp.set_deadline(Parsers::parse_timepoint(*_options.deadline)); });
