@@ -1,4 +1,4 @@
 CompileFlags:
-  CompilationDatabase: build/debug/clang # Path to complile_commands.json
+  CompilationDatabase: build # Path to complile_commands.json
   Add:
     - -std=c++20
