@@ -6,7 +6,7 @@ BUILD_DIR ?= build
 
 all: build
 
-build: CMakeLists.txt CMakePresets.json CMakeUserPresets.json install-deps
+build: CMakeLists.txt CMakePresets.json install-deps
 	cmake --preset $(CMAKE_PRESET)
 	cmake --build --preset $(CMAKE_PRESET)
 
@@ -21,8 +21,7 @@ install:
 	cmake --install $(BUILD_DIR)
 
 package: build
-	cd build/
-	cpack
+	cd $(BUILD_DIR) && cpack
 
 clean:
 	rm -rf build

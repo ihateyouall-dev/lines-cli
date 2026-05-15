@@ -1,0 +1,76 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+permissions:
+  contents: write
+
+jobs:
+  Build:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest, ubuntu-24.04-arm, windows-11-arm]
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install Conan
+        run: pip install conan --break-system-packages
+
+      - name: Cache Conan
+        uses: actions/cache@v4
+        with:
+          path: ~/.conan2
+          key: conan-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('conanfile.txt') }}
+          restore-keys: |
+            conan-${{ runner.os }}-${{ runner.arch }}-
+
+      - name: Detect profile
+        run: conan profile detect --force
+
+      - name: Install NSIS
+        if: ${{ matrix.os == 'windows-latest' || matrix.os == 'windows-11-arm' }}
+        run: choco install nsis
+
+      - name: Build
+        run: make
+
+      - name: Package
+        run: make package
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: packages-${{ runner.os }}-${{ runner.arch }}
+          path: |
+            build/*.tar.gz
+            build/*.zip
+            build/*.exe
+          if-no-files-found: ignore
+
+  Release:
+    needs: Build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts/**/*
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            build/*.tar.gz
+            build/*.zip
+            build/*.exe
+          overwrite_files: true
+          fail_on_unmatched_files: false
