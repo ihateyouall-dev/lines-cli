@@ -54,6 +54,7 @@ jobs:
             build/*.zip
             build/*.exe
           if-no-files-found: ignore
+          merge-multiple: true
 
   Release:
     needs: Build
@@ -63,14 +64,13 @@ jobs:
       - name: Download artifacts
         uses: actions/download-artifact@v4
         with:
-          path: artifacts/**/*
+          path: artifacts
 
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            build/*.tar.gz
-            build/*.zip
-            build/*.exe
+            artifacts/**/*.tar.gz
+            artifacts/**/*.zip
+            artifacts/**/*.exe
           overwrite_files: true
-          fail_on_unmatched_files: false
