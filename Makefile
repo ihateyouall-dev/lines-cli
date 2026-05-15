@@ -20,5 +20,9 @@ test:
 install:
 	cmake --install $(BUILD_DIR)
 
+package: build
+	cd build/
+	cpack
+
 clean:
 	rm -rf build
