@@ -60,9 +60,25 @@ make test
 
 ## Installation
 If you already built project from source, run:
-`sudo make install`
+```shell
+sudo make install
+lines-cli --help
+```
 
-Otherwise, see github releases for installers.
+On Linux and macOS you can use install script:
+```shell
+curl -fsSL https://raw.githubusercontent.com/ihateyouall-dev/lines-cli/main/scripts/install.sh | sh
+lines-cli --help
+```
+
+This will install lines-cli into `/usr/local`, but you can specify install prefix:
+```shell
+export LINES_INSTALL_PREFIX="$HOME/.local"
+curl -fsSL https://raw.githubusercontent.com/ihateyouall-dev/lines-cli/main/scripts/install.sh | sh
+lines-cli --help
+```
+
+On Windows, see releases for NSIS installer.
 
 ## Usage
 ### Addition
