@@ -99,7 +99,9 @@ main() {
 
     check_sudo
     echo "Installing..."
-    $SUDO mv "$TMP_DIR/$ARCHIVE/"* "$LINES_INSTALL_PREFIX"
+    $SUDO install -d "$LINES_INSTALL_PREFIX/bin" "$LINES_INSTALL_PREFIX/share/doc"
+    $SUDO install -m 755 "$TMP_DIR/$ARCHIVE/bin/"* "$LINES_INSTALL_PREFIX/bin"
+    $SUDO cp -r "$TMP_DIR/$ARCHIVE/share/doc/"* "$LINES_INSTALL_PREFIX/share/doc"
 
     echo "Installation successful"
     return 0
