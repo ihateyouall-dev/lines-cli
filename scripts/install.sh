@@ -81,6 +81,7 @@ prepare_tmp() {
 }
 
 untar() {
+    require_command tar
     tar -xzf "$1" -C "$2" || abort "Cannot unpack archive $1"
 }
 
@@ -89,6 +90,9 @@ main() {
     detect_system_info
     make_url
     prepare_tmp
+
+    require_command install
+    require_command cp
 
     echo "Downloading archive..."
     download "$URL" "$TMP_DIR/lines-cli-install.tar.gz"
@@ -99,11 +103,11 @@ main() {
 
     check_sudo
     echo "Installing..."
-    $SUDO install -d "$LINES_INSTALL_PREFIX/bin" "$LINES_INSTALL_PREFIX/share/doc"
+    $SUDO install -d "$LINES_INSTALL_PREFIX/bin" "$LINES_INSTALL_PREFIX/share/doc" || abort "Failed to create install dirs in $LINES_INSTALL_PREFIX"
     $SUDO install -m 755 "$TMP_DIR/$ARCHIVE/bin/"* "$LINES_INSTALL_PREFIX/bin"
     $SUDO cp -r "$TMP_DIR/$ARCHIVE/share/doc/"* "$LINES_INSTALL_PREFIX/share/doc"
 
-    echo "Installation successful"
+    echo "Successfully installed Lines CLI in $LINES_INSTALL_PREFIX"
     return 0
 }
 
