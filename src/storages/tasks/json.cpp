@@ -30,12 +30,12 @@ auto Lines::TasksJSON::to_json(const Lines::Task &task) -> nlohmann::json {
         auto rr = *task.repeat_rule();
         static constexpr int EVERY_UNIT_T = 0;
         static constexpr int EVERY_WEEKDAY_T = 1;
-        try {
+        if (std::holds_alternative<Lines::TaskRepeat::EveryUnit>(rr.repeat_type)) {
             auto rtype = std::get<Lines::TaskRepeat::EveryUnit>(rr.repeat_type);
             result["repeat"]["type"] = EVERY_UNIT_T;
             result["repeat"]["interval"] = rtype.interval.count();
             result["repeat"]["unit"] = rtype.unit_str;
-        } catch (std::bad_variant_access &) {
+        } else {
             auto rtype = std::get<Lines::TaskRepeat::EveryWeekday>(rr.repeat_type);
             result["repeat"]["type"] = EVERY_WEEKDAY_T;
             result["repeat"]["weekdays"] = rtype.weekdays;
