@@ -1,6 +1,6 @@
-#include "storages/utils/filesystem.hpp"
+#include "client-utils/filesystem.hpp"
 
-auto Lines::detail::get_fs_home() -> std::filesystem::path {
+auto Lines::ClientUtils::get_fs_home() -> std::filesystem::path {
 #if defined(_WIN32)
     return std::getenv("USERPROFILE");
 #else
@@ -8,7 +8,7 @@ auto Lines::detail::get_fs_home() -> std::filesystem::path {
 #endif
 }
 
-auto Lines::detail::get_fs_dotfile_storage() -> std::filesystem::path {
+auto Lines::ClientUtils::get_fs_dotfile_storage() -> std::filesystem::path {
 #if defined(_WIN32)
     return std::getenv("APPDATA");
 #elif defined(__APPLE__)

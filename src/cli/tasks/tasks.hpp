@@ -1,8 +1,8 @@
+#include "client-utils/filesystem.hpp"
 #include "client-utils/utils.hpp"
 #include "filter.hpp"
 #include "lines/tasks/task.hpp"
 #include "storages/tasks/json.hpp"
-#include "storages/utils/filesystem.hpp"
 
 #include <iostream>
 #include <string>
@@ -28,8 +28,7 @@ class Tasks { // NOLINT
 
         TasksFilter::TasksFilterRule tasks_filter_rule;
     } _options;
-    Lines::TasksJSONStorage _storage{Lines::detail::get_fs_home() / ".lines.d" / "saves" /
-                                     "tasks.json"};
+    TasksJSONStorage _storage{ClientUtils::get_fs_home() / ".lines.d" / "saves" / "tasks.json"};
     std::string timepoint_format = "YYYY/MM/DD[_HH:MM[:SS]]";
     const std::string disable = "none"; // NOLINT
 

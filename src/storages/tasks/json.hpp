@@ -1,7 +1,7 @@
 #pragma once
 
 #include "lines/tasks/task.hpp"
-#include "nlohmann/json.hpp"
+#include "nlohmann/json_fwd.hpp"
 
 #include <cstddef>
 #include <filesystem>
@@ -15,7 +15,6 @@ auto from_json(const nlohmann::json &json) -> Lines::Task;
 class TasksJSONStorage {
     std::vector<Task> _tasks;
     std::filesystem::path _file;
-    std::size_t last_id{};
 
   public:
     using iterator = decltype(_tasks)::iterator;
