@@ -7,7 +7,7 @@ find_package(nlohmann_json CONFIG REQUIRED)
 FetchContent_Declare(
   Lines
   GIT_REPOSITORY https://github.com/ihateyouall-dev/lines-core
-  GIT_TAG v0.1.0)
+  GIT_TAG main)
 
 FetchContent_MakeAvailable(Lines)
 
@@ -16,11 +16,13 @@ add_library(tasks_json_storage)
 add_library(config_json_storage)
 add_library(cli_tasks)
 add_library(cli_docs)
+add_library(cli_config)
 add_library(client_utils)
 
 target_sources(cli_root PRIVATE cli/root.cpp)
 target_sources(cli_tasks PRIVATE cli/tasks/tasks.cpp cli/tasks/filter.cpp)
 target_sources(cli_docs PRIVATE cli/docs/docs.cpp)
+target_sources(cli_config PRIVATE cli/config/config.cpp)
 target_sources(tasks_json_storage PRIVATE storages/tasks/json.cpp)
 target_sources(config_json_storage PRIVATE storages/config/json.cpp)
 
@@ -30,16 +32,24 @@ target_sources(client_utils PRIVATE ${CLIENT_UTILS_SOURCES})
 
 set(LINES_SRC ${PROJECT_SOURCE_DIR}/src)
 
-foreach(target cli_root cli_tasks cli_docs tasks_json_storage
-               config_json_storage client_utils)
+foreach(
+  target
+  cli_root
+  cli_tasks
+  cli_docs
+  cli_config
+  tasks_json_storage
+  config_json_storage
+  client_utils)
   target_include_directories(${target} PUBLIC ${LINES_SRC})
 endforeach()
 
 target_link_libraries(cli_tasks PUBLIC CLI11::CLI11 Lines::Tasks
                                        tasks_json_storage client_utils)
 target_link_libraries(cli_root PUBLIC CLI11::CLI11 Lines::Lines cli_tasks
-                                      cli_docs)
+                                      cli_docs cli_config)
 target_link_libraries(cli_docs PUBLIC CLI11::CLI11)
+target_link_libraries(cli_config PUBLIC CLI11::CLI11 config_json_storage)
 target_link_libraries(tasks_json_storage PUBLIC nlohmann_json::nlohmann_json
                                                 Lines::Tasks client_utils)
 target_link_libraries(config_json_storage PUBLIC nlohmann_json::nlohmann_json

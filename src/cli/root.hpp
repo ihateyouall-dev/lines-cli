@@ -4,8 +4,8 @@
 
 namespace Lines::CLI {
 class Root : public ::CLI::App {
-    Tasks _tasks;
-    Docs _docs;
+    TasksCmd _tasks;
+    DocsCmd _docs;
 
   public:
     Root();

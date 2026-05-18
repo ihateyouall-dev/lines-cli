@@ -12,7 +12,7 @@ class App;
 }
 
 namespace Lines::CLI {
-class Tasks { // NOLINT
+class TasksCmd { // NOLINT
     // Options that gained from command line
     struct Options {
         std::optional<std::string> title;
@@ -102,16 +102,16 @@ class Tasks { // NOLINT
     }
 
   public:
-    Tasks();
-    Tasks(Tasks &&) = delete;
+    TasksCmd();
+    TasksCmd(TasksCmd &&) = delete;
 
-    auto operator=(Tasks &&) -> Tasks & = delete;
+    auto operator=(TasksCmd &&) -> TasksCmd & = delete;
 
     void init(::CLI::App &app);
 
     void save();
     [[nodiscard]] auto dirty() const -> bool;
 
-    ~Tasks() = default;
+    ~TasksCmd() = default;
 };
 } // namespace Lines::CLI

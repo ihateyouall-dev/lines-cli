@@ -7,10 +7,8 @@ class App;
 }
 
 namespace Lines::CLI {
-class DocsCmd {
-    std::string manual;
-
-  public:
-    void init(::CLI::App &app);
+class ConfigCmd {
+    std::string _key;
+    std::string _val;
 };
 } // namespace Lines::CLI
