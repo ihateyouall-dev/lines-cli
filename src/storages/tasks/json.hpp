@@ -24,8 +24,6 @@ class TasksJSONStorage {
     void load_from_json(const nlohmann::json &json);
     void load_from_file();
 
-    auto tasks() -> std::vector<Task> &;
-
     [[nodiscard]] auto tasks() const -> const std::vector<Task> &;
 
     [[nodiscard]] auto to_json() const -> nlohmann::json;

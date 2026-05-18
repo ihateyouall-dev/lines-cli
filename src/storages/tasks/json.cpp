@@ -129,8 +129,6 @@ void Lines::TasksJSONStorage::load_from_file() {
     load_from_json(json);
 }
 
-auto Lines::TasksJSONStorage::tasks() -> std::vector<Task> & { return _tasks; }
-
 auto Lines::TasksJSONStorage::tasks() const -> const std::vector<Task> & { return _tasks; }
 
 auto Lines::TasksJSONStorage::to_json() const -> nlohmann::json {
@@ -146,7 +144,7 @@ void Lines::TasksJSONStorage::save_to_file() const {
     std::ofstream fs(_file);
 
     if (!fs) {
-        throw std::runtime_error("Lines::TasksJSONStorage::load_from_file: cannot open file: " +
+        throw std::runtime_error("Lines::TasksJSONStorage::save_to_file: cannot open file: " +
                                  _file.string());
     }
 
