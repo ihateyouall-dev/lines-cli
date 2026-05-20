@@ -7,7 +7,7 @@ find_package(nlohmann_json CONFIG REQUIRED)
 FetchContent_Declare(
   Lines
   GIT_REPOSITORY https://github.com/ihateyouall-dev/lines-core
-  GIT_TAG main)
+  GIT_TAG develop)
 
 FetchContent_MakeAvailable(Lines)
 

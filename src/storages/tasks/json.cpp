@@ -18,8 +18,8 @@ auto Lines::TasksJSON::to_json(const Lines::Task &task) -> nlohmann::json {
     if (task.description()) {
         result["description"] = task.description();
     }
-    if (task.deadline()) {
-        result["deadline"] = Lines::ClientUtils::timepoint_str_s(*task.deadline());
+    if (task.due()) {
+        result["due"] = Lines::ClientUtils::timepoint_str_s(*task.due());
     }
 
     for (const auto &tag : task.tags()) {
@@ -68,9 +68,9 @@ auto Lines::TasksJSON::from_json(const nlohmann::json &json) -> Lines::Task {
 
     Lines::Task task(info);
 
-    if (json.contains("deadline")) {
-        task.set_deadline(
-            Lines::ClientUtils::Parsers::parse_timepoint_nv(json["deadline"].get<std::string>()));
+    if (json.contains("due")) {
+        task.set_due(
+            Lines::ClientUtils::Parsers::parse_timepoint_nv(json["due"].get<std::string>()));
     }
 
     if (json.contains("repeat")) {

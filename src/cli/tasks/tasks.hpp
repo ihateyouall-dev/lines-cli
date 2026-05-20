@@ -19,7 +19,7 @@ class TasksCmd { // NOLINT
         std::optional<std::string> description;
         std::optional<std::vector<std::string>> tags;
 
-        std::optional<std::string> deadline;
+        std::optional<std::string> due;
 
         bool force = false;
 
@@ -35,8 +35,6 @@ class TasksCmd { // NOLINT
     bool _dirty = false;
 
     auto require_task(std::size_t index) -> Lines::Task *;
-    void enable_task_repeat_rule(Lines::Task &task);
-    void enable_task_repeat_end(Lines::Task &task);
 
     struct TaskOptionsFormats {
         std::string timepoint_format;

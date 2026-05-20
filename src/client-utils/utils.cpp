@@ -65,16 +65,16 @@ auto task_str_unfolded(const Lines::Task &task) -> std::string {
     if (!task.tags().empty()) {
         result += std::format("Tags:{}\n", tags_str(task));
     }
-    if (task.deadline()) {
-        result += std::format("Deadline: {}\n", deadline_str(*task.deadline()));
+    if (task.due()) {
+        result += std::format("Due: {}\n", due_str(*task.due()));
     }
     if (task.repeat_rule()) {
-        if (task.next_deadline()) {
-            result += std::format("Next deadline: {}\n", deadline_str(*task.next_deadline()));
+        if (task.next_due()) {
+            result += std::format("Next due: {}\n", due_str(*task.next_due()));
         }
         auto rr = *task.repeat_rule();
         if (rr.end) {
-            result += std::format("Repeat ends: {}\n", deadline_str(*rr.end));
+            result += std::format("Repeat ends: {}\n", due_str(*rr.end));
         }
     }
     result += '\n' + completion_sign(task);
@@ -84,8 +84,8 @@ auto task_str_unfolded(const Lines::Task &task) -> std::string {
 auto task_str(const Lines::Task &task) -> std::string {
     std::string res = std::format("{} ", completion_sign(task));
     res += task.title();
-    if (task.deadline()) {
-        res += std::format(" {}", deadline_str(*task.deadline()));
+    if (task.due()) {
+        res += std::format(" {}", due_str(*task.due()));
     }
     if (!task.tags().empty()) {
         res += tags_str(task);
@@ -99,10 +99,10 @@ auto today_str() -> std::string { return date_str(today()); }
 auto tomorrow() -> Lines::Temporal::Date { return today() + Lines::Temporal::Days{1}; }
 auto tomorrow_str() -> std::string { return date_str(tomorrow()); }
 
-auto deadline_color(const Lines::Temporal::TimePoint &deadline) -> std::string {
+auto due_color(const Lines::Temporal::TimePoint &due) -> std::string {
     using namespace Lines::Temporal::Literals;
 
-    auto delta = deadline - Lines::Temporal::LocalClock::now();
+    auto delta = due - Lines::Temporal::LocalClock::now();
 
     if (delta < 0_s) {
         return Colors::red;
@@ -113,7 +113,7 @@ auto deadline_color(const Lines::Temporal::TimePoint &deadline) -> std::string {
     return Colors::green;
 }
 
-auto deadline_str(const Lines::Temporal::TimePoint &deadline) -> std::string {
-    return Colors::colorize(timepoint_str(deadline), deadline_color(deadline));
+auto due_str(const Lines::Temporal::TimePoint &due) -> std::string {
+    return Colors::colorize(timepoint_str(due), due_color(due));
 }
 } // namespace Lines::ClientUtils

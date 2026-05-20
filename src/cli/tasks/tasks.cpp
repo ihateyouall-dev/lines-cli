@@ -18,35 +18,6 @@
 using namespace Lines::ClientUtils;
 
 namespace {
-void disable_task_repeat_rule(Lines::Task &task) { task.set_repeat_rule(std::nullopt); }
-void disable_task_repeat_end(Lines::Task &task) {
-    if (!task.repeat_rule() || !task.repeat_rule()->end) {
-        throw std::logic_error(
-            "ERROR: Cannot disable repeat end from task without repeat rule or repeat end");
-    }
-    auto rr = *task.repeat_rule();
-    rr.end = std::nullopt;
-    task.set_repeat_rule(rr);
-}
-void disable_task_deadline(Lines::Task &task) {
-    if (task.repeat_rule()) {
-        throw std::logic_error("ERROR: Cannot disable deadline from task with repeat rule");
-    }
-    task.set_deadline(std::nullopt);
-}
-
-void complete_or_advance_deadline(Lines::Task &task) { // NOLINT
-    if (task.repeat_rule()) {
-        task.advance_deadline();
-        // Disabling repeat rule when its end reached
-        if (!task.deadline()) {
-            task.set_repeat_rule(std::nullopt);
-        }
-    } else {
-        task.complete();
-    }
-}
-
 template <typename Fn> void with_validation(const Fn &fn) {
     try {
         fn();
@@ -131,7 +102,7 @@ void Lines::CLI::TasksCmd::completion_init(::CLI::App &app) {
     uncomplete->get_option_group("filters")->require_option(1, 0);
 
     complete->callback([this]() -> void {
-        completion_callback([](auto &task) -> void { complete_or_advance_deadline(task); },
+        completion_callback([](auto &task) -> void { task.complete(); },
                             [](const auto &task) -> bool { return task.completed(); }, "complete");
     });
     uncomplete->callback([this]() -> void {
@@ -196,20 +167,19 @@ void Lines::CLI::TasksCmd::add_filter_options(::CLI::App &app, std::string_view 
     // Time point specific filters
     filters
         ->add_option_function<std::string>(
-            "-D,--deadline",
+            "-D,--due",
             [this](const std::string &date) -> void {
                 with_validation([&]() -> void {
-                    _options.tasks_filter_rule.deadline = Parsers::parse_timepoint(date);
+                    _options.tasks_filter_rule.due = Parsers::parse_timepoint(date);
                 });
             },
-            std::format("{} task with given deadline (format: YYYY.MM.DD_[HH:MM[:SS]])",
-                        desc_prefix))
+            std::format("{} task with given due (format: YYYY.MM.DD_[HH:MM[:SS]])", desc_prefix))
         ->type_name("TIMEPOINT");
 
     auto active_callback = [this](bool b) { // NOLINT
         return [this, b]() -> void {
             _options.tasks_filter_rule.active_bool = b;
-            _options.tasks_filter_rule.active_deadline = Lines::Temporal::LocalClock::now();
+            _options.tasks_filter_rule.active_due = Lines::Temporal::LocalClock::now();
         };
     };
     filters->add_flag_callback("--ac,--active", active_callback(true),
@@ -231,16 +201,16 @@ void Lines::CLI::TasksCmd::addition_callback() {
                                      _options.tags.value_or(std::vector<std::string>{})}};
 
     with_validation([&]() -> void {
-        if (_options.deadline) {
-            task.set_deadline(Parsers::parse_timepoint(*_options.deadline));
+        if (_options.due) {
+            task.set_due(Parsers::parse_timepoint(*_options.due));
         }
 
         if (_options.repeat_rule) {
-            enable_task_repeat_rule(task);
+            with_validation([&]() -> void { Parsers::parse_repeat_rule(*_options.repeat_rule); });
         }
 
         if (_options.repeat_end) {
-            enable_task_repeat_end(task);
+            with_validation([&]() -> void { Parsers::parse_timepoint(*_options.repeat_end); });
         }
     });
 
@@ -265,29 +235,31 @@ void Lines::CLI::TasksCmd::editing_callback() {
     if (_options.tags) {
         tmp.set_tags(*_options.tags);
     }
-    if (_options.deadline) {
-        if (*_options.deadline == disable) {
-            with_validation([&]() -> void { disable_task_deadline(tmp); });
+    if (_options.due) {
+        if (*_options.due == disable) {
+            with_validation([&]() -> void { tmp.set_due(std::nullopt); });
         } else {
             with_validation(
-                [&]() -> void { tmp.set_deadline(Parsers::parse_timepoint(*_options.deadline)); });
+                [&]() -> void { tmp.set_due(Parsers::parse_timepoint(*_options.due)); });
         }
     }
     if (_options.repeat_rule) {
         if (_options.repeat_rule == disable) {
-            disable_task_repeat_rule(tmp);
+            tmp.set_repeat_rule(std::nullopt);
         } else {
             with_validation([&]() -> void {
                 tmp.uncomplete();
-                enable_task_repeat_rule(tmp);
+                tmp.set_repeat_rule(Parsers::parse_repeat_rule(*_options.repeat_rule));
             });
         }
     }
     if (_options.repeat_end) {
         if (*_options.repeat_end == disable) {
-            with_validation([&]() -> void { disable_task_repeat_end(tmp); });
+            with_validation([&]() -> void { tmp.set_repeat_end(std::nullopt); });
         } else {
-            with_validation([&]() -> void { enable_task_repeat_end(tmp); });
+            with_validation([&]() -> void {
+                tmp.set_repeat_end(Parsers::parse_timepoint(*_options.repeat_end));
+            });
         }
     }
     std::cout << std::format("Edited task:\n{}\n", task_str_unfolded(tmp));
@@ -355,8 +327,8 @@ void Lines::CLI::TasksCmd::add_task_options(::CLI::App &app, std::string_view de
                    std::format("{} description", desc_prefix));
     app.add_option("-t,--tags", _options.tags, std::format("{} tags", desc_prefix));
 
-    app.add_option("-D,--deadline", _options.deadline,
-                   std::format("{} planned deadline. Format: {}{}", desc_prefix,
+    app.add_option("-D,--due", _options.due,
+                   std::format("{} planned due. Format: {}{}", desc_prefix,
                                formats.timepoint_format, formats.disabling_annot))
         ->type_name("TIMEPOINT");
     app.add_option("-R,--repeat", _options.repeat_rule,
@@ -365,23 +337,4 @@ void Lines::CLI::TasksCmd::add_task_options(::CLI::App &app, std::string_view de
     app.add_option("--rend,--repeat-end", _options.repeat_end,
                    std::format("{} end of repeat{}", desc_prefix, formats.disabling_annot))
         ->type_name("TIMEPOINT");
-}
-
-void Lines::CLI::TasksCmd::enable_task_repeat_rule(Lines::Task &task) {
-    Lines::TaskRepeatRule rr;
-    rr = Parsers::parse_repeat_rule(*_options.repeat_rule);
-    task.set_repeat_rule(rr);
-    if (!task.deadline()) {
-        task.set_deadline(Lines::Temporal::LocalClock::now());
-    }
-    task.advance_deadline();
-}
-
-void Lines::CLI::TasksCmd::enable_task_repeat_end(Lines::Task &task) {
-    if (!task.repeat_rule()) {
-        throw std::logic_error("ERROR: Cannot give repeat end to task without repeat rule");
-    }
-    Lines::TaskRepeatRule rr = *task.repeat_rule();
-    rr.end = Lines::ClientUtils::Parsers::parse_timepoint(*_options.repeat_end);
-    task.set_repeat_rule(rr);
 }

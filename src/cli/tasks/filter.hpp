@@ -17,9 +17,9 @@ struct TasksFilterRule {
     std::optional<TaskID> id;
     std::optional<std::vector<TaskTag>> any_tag;
     std::optional<std::vector<TaskTag>> all_tags;
-    std::optional<Lines::Temporal::TimePoint> deadline;
+    std::optional<Lines::Temporal::TimePoint> due;
     std::optional<bool> active_bool;
-    std::optional<Lines::Temporal::TimePoint> active_deadline;
+    std::optional<Lines::Temporal::TimePoint> active_due;
     std::optional<re2::RE2> title_regex;
     std::optional<re2::RE2> partial_title_regex;
 };
