@@ -492,4 +492,19 @@ See "lines-cli docs repeat" for more info)");
     res.repeat_type = Lines::TaskRepeat::EveryWeekday{.weekdays = parse_repeat_weekdays(str)};
     return res;
 }
+
+template <> auto parse<bool>(const std::string &str) -> bool {
+    static constexpr std::array<std::string, 5> true_values{"true", "t", "on", "yes", "1"};
+    static constexpr std::array<std::string, 5> false_values{"false", "f", "off", "no", "0"};
+
+    const auto *tpos = std::ranges::find(true_values, str);
+    if (tpos != std::end(true_values)) {
+        return true;
+    }
+    const auto *fpos = std::ranges::find(false_values, str);
+    if (fpos != std::end(false_values)) {
+        return false;
+    }
+    throw std::invalid_argument("ERROR: Invalid boolean value");
+}
 } // namespace Lines::ClientUtils::Parsers

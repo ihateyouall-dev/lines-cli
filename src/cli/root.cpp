@@ -8,9 +8,11 @@ Lines::CLI::Root::Root() {
                       []() -> void { std::cout << "Lines CLI " << LINES_CLI_VERSION_STR << '\n'; });
     _tasks.init(*this);
     _docs.init(*this);
+    _config.init(*this);
     this->callback([this]() -> void {
         if (_tasks.dirty()) {
             _tasks.save();
         }
+        _config.save();
     });
 }

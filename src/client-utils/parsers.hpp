@@ -23,4 +23,6 @@ auto parse_timepoint_nv(const std::string &str) -> Lines::Temporal::TimePoint;
 auto parse_timepoint(const std::string &str) -> Lines::Temporal::TimePoint;
 
 auto parse_repeat_rule(const std::string &str) -> Lines::TaskRepeatRule;
+
+template <typename Tp> auto parse(const std::string &) -> Tp;
 } // namespace Lines::ClientUtils::Parsers
