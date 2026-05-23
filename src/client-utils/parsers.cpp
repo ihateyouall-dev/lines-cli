@@ -494,14 +494,16 @@ See "lines-cli docs repeat" for more info)");
 }
 
 template <> auto parse<bool>(const std::string &str) -> bool {
+    std::string lstr = to_lower_str(str);
+
     static constexpr std::array<std::string, 5> true_values{"true", "t", "on", "yes", "1"};
     static constexpr std::array<std::string, 5> false_values{"false", "f", "off", "no", "0"};
 
-    const auto *tpos = std::ranges::find(true_values, str);
+    const auto *tpos = std::ranges::find(true_values, lstr);
     if (tpos != std::end(true_values)) {
         return true;
     }
-    const auto *fpos = std::ranges::find(false_values, str);
+    const auto *fpos = std::ranges::find(false_values, lstr);
     if (fpos != std::end(false_values)) {
         return false;
     }
