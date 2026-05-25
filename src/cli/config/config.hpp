@@ -30,9 +30,12 @@ class ConfigCmd {
     std::unordered_map<std::string, ConfigKeyInfo> _keys;
 
     void register_key(const std::string &key, const ConfigKeyInfo &info);
+    void initially_register_keys();
+    void print_key_value(const std::string &key, const ConfigKeyInfo &key_info);
+
     void print_key_info(const std::string &key);
     void assign_value_to_key(const std::string &key, const std::string &value);
-    auto get_key_info(const std::string &key) -> ConfigKeyInfo;
+    auto get_key_info(const std::string &key) -> const ConfigKeyInfo &;
     template <typename Tp> auto get_key_value(const std::string &key) {
         auto *key_ptr = get_key_info(key).ptr;
         return *static_cast<Tp *>(key_ptr);

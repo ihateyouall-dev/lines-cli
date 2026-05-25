@@ -1,5 +1,6 @@
 #include "storages/config/json.hpp"
 
+#include "client-utils/config.hpp"
 #include "nlohmann/json.hpp"
 
 #include <fstream>
@@ -9,16 +10,22 @@ template <typename Val>
 void assign_from_json(Val &val, const nlohmann::json &json, std::string_view json_key) {
     val = json.value(json_key, val);
 }
+
+#define ASSIGN_IF_NOT_DEFAULT(struct_field, json_key)                                              \
+    if (cfg.struct_field != default_cfg.struct_field) {                                            \
+        res[json_key] = cfg.struct_field;                                                          \
+    }
 } // namespace
 
 auto Lines::ConfigJSON::to_json(const ClientUtils::Config &cfg) -> nlohmann::json {
     nlohmann::json res;
     static constexpr int CFG_VER = 1;
-    res["version"] = CFG_VER;
+    res["_version"] = CFG_VER;
+    ClientUtils::Config default_cfg;
 
-    res["alwaysForce"] = cfg.always_force;
-    res["cli.colorize"] = cfg.cli_colorize;
-    res["cli.useUnicode"] = cfg.cli_use_unicode;
+    ASSIGN_IF_NOT_DEFAULT(always_force, "alwaysForce")
+    ASSIGN_IF_NOT_DEFAULT(cli_colorize, "cli.colorize")
+    ASSIGN_IF_NOT_DEFAULT(cli_use_unicode, "cli.useUnicode")
     return res;
 }
 

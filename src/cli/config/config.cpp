@@ -4,7 +4,6 @@
 #include "client-utils/parsers.hpp"
 
 #include <format>
-#include <ios>
 #include <stdexcept>
 #include <string>
 #include <unordered_map>
@@ -18,16 +17,28 @@ Lines::CLI::ConfigCmd::ConfigCmd() {
     _cfg = &_storage.config();
 }
 
+void Lines::CLI::ConfigCmd::initially_register_keys() {
+    register_key("alwaysForce", {.ptr = &_cfg->always_force,
+                                 .description = "Always force actions that require confirmation",
+                                 .default_value = "false",
+                                 .type = "BOOLEAN"});
+    register_key("cli.colorize", {.ptr = &_cfg->cli_colorize,
+                                  .description = "Use ASCII colors in stdout",
+                                  .default_value = "true",
+                                  .type = "BOOLEAN"});
+    register_key("cli.useUnicode", {.ptr = &_cfg->cli_use_unicode,
+                                    .description = "Use unicode symbols in stdout",
+                                    .default_value = "true",
+                                    .type = "BOOLEAN"});
+}
+
 void Lines::CLI::ConfigCmd::init(::CLI::App &app) {
     auto *config = app.add_subcommand("config", "Work with configuration")->alias("cfg");
 
     config->add_option("Key", _key, "Key in config")->required();
     config->add_option("Value", _val, "Give a new value to the key");
 
-    register_key("alwaysForce", {.ptr = &_cfg->always_force,
-                                 .description = "Always force actions that require confirmation",
-                                 .default_value = "false",
-                                 .type = "BOOLEAN"});
+    initially_register_keys();
 
     config->callback([this]() -> void {
         if (!_keys.contains(_key)) {
@@ -52,14 +63,20 @@ void Lines::CLI::ConfigCmd::register_key(const std::string &key, const ConfigKey
     _keys[key] = info;
 }
 
+void Lines::CLI::ConfigCmd::print_key_value(const std::string &key, const ConfigKeyInfo &key_info) {
+    if (key_info.type == "BOOLEAN") {
+        std::cout << std::boolalpha << get_key_value<bool>(key) << '\n';
+    }
+}
+
 void Lines::CLI::ConfigCmd::print_key_info(const std::string &key) {
     const auto &key_info = _keys[key];
 
     std::cout << std::format("Key: {}\n{}\nValue type: {}\nValue: ", key, key_info.description,
                              key_info.type);
-    if (key_info.type == "BOOLEAN") {
-        std::cout << std::boolalpha << get_key_value<bool>(key) << '\n';
-    }
+
+    print_key_value(key, key_info);
+
     std::cout << std::format("Default value: {}\n", key_info.default_value);
     if (!key_info.possible_values.empty()) {
         std::cout << key_info.possible_values << '\n';
@@ -76,7 +93,7 @@ void Lines::CLI::ConfigCmd::assign_value_to_key(const std::string &key, // NOLIN
     }
 }
 
-auto Lines::CLI::ConfigCmd::get_key_info(const std::string &key) -> ConfigKeyInfo {
+auto Lines::CLI::ConfigCmd::get_key_info(const std::string &key) -> const ConfigKeyInfo & {
     return _keys[key];
 }
 
@@ -85,3 +102,5 @@ void Lines::CLI::ConfigCmd::save() {
         _storage.save_to_file();
     }
 }
+
+auto Lines::CLI::ConfigCmd::config() -> ClientUtils::Config { return *_cfg; }
