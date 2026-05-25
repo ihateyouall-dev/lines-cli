@@ -1,3 +1,4 @@
+#include "client-utils/config.hpp"
 #include "client-utils/filesystem.hpp"
 #include "client-utils/utils.hpp"
 #include "filter.hpp"
@@ -29,6 +30,8 @@ class TasksCmd { // NOLINT
         TasksFilter::TasksFilterRule tasks_filter_rule;
     } _options;
     TasksJSONStorage _storage{ClientUtils::get_fs_home() / ".lines.d" / "saves" / "tasks.json"};
+
+    ClientUtils::Config _cfg;
     std::string timepoint_format = "YYYY/MM/DD[_HH:MM[:SS]]";
     const std::string disable = "none"; // NOLINT
 
@@ -108,6 +111,7 @@ class TasksCmd { // NOLINT
     void init(::CLI::App &app);
 
     void save();
+    void set_config(const ClientUtils::Config &cfg);
     [[nodiscard]] auto dirty() const -> bool;
 
     ~TasksCmd() = default;

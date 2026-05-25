@@ -338,3 +338,4 @@ void Lines::CLI::TasksCmd::add_task_options(::CLI::App &app, std::string_view de
                    std::format("{} end of repeat{}", desc_prefix, formats.disabling_annot))
         ->type_name("TIMEPOINT");
 }
+void Lines::CLI::TasksCmd::set_config(const ClientUtils::Config &cfg) { _cfg = cfg; }
