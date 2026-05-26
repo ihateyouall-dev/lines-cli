@@ -263,7 +263,7 @@ void Lines::CLI::TasksCmd::editing_callback() {
         }
     }
     std::cout << std::format("Edited task:\n{}\n", task_str_unfolded(tmp));
-    if (!_options.force && !confirm()) {
+    if (!_options.force && !_cfg.always_force && !confirm()) {
         return;
     }
     *task = tmp;
@@ -308,9 +308,8 @@ void Lines::CLI::TasksCmd::deletion_callback() {
         }
     }
 
-    if (!_options.force) {
-        bool confirmed = confirm();
-        if (!confirmed) {
+    if (!_options.force && !_cfg.always_force) {
+        if (!confirm()) {
             return;
         }
     }
