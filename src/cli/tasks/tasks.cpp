@@ -206,11 +206,15 @@ void Lines::CLI::TasksCmd::addition_callback() {
         }
 
         if (_options.repeat_rule) {
-            with_validation([&]() -> void { Parsers::parse_repeat_rule(*_options.repeat_rule); });
+            with_validation([&]() -> void {
+                task.set_repeat_rule(Parsers::parse_repeat_rule(*_options.repeat_rule));
+            });
         }
 
         if (_options.repeat_end) {
-            with_validation([&]() -> void { Parsers::parse_timepoint(*_options.repeat_end); });
+            with_validation([&]() -> void {
+                task.set_repeat_end(Parsers::parse_timepoint(*_options.repeat_end));
+            });
         }
     });
 
