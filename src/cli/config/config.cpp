@@ -23,7 +23,7 @@ void Lines::CLI::ConfigCmd::initially_register_keys() {
                                  .default_value = "false",
                                  .type = "BOOLEAN"});
     register_key("cli.colorize", {.ptr = &_cfg->cli_colorize,
-                                  .description = "Use ASCII colors in stdout",
+                                  .description = "Use ANSI colors in stdout",
                                   .default_value = "true",
                                   .type = "BOOLEAN"});
     register_key("cli.useUnicode", {.ptr = &_cfg->cli_use_unicode,
