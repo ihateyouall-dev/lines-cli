@@ -9,6 +9,7 @@
 #include <functional>
 #include <iostream>
 #include <string>
+#include <string_view>
 
 namespace Lines::ClientUtils {
 auto confirm() -> bool {
@@ -49,19 +50,20 @@ auto completion_sign(const Lines::Task &task, bool use_unicode, bool colorize) -
     assert(!task.completed() ||
            !task.repeat_rule() && "Tasks with repeat rule cannot have completion state");
     auto process_sign = [&](std::string &sign, std::string_view full,
-                            std::string_view fallback) -> void { // NOLINT
+                            std::string_view fallback, // NOLINT
+                            const std::string &color) -> void {
         sign = full;
         if (!use_unicode) {
             sign = fallback;
         }
         if (colorize) {
-            sign = Colors::colorize(sign, Colors::blue);
+            sign = Colors::colorize(sign, color);
         }
     };
     if (task.repeat_rule()) {
-        process_sign(sign, "↻", "R");
+        process_sign(sign, "↻", "R", Colors::blue);
     } else if (task.completed()) {
-        process_sign(sign, "✓", "X");
+        process_sign(sign, "✓", "X", Colors::green);
     } else {
         sign = " ";
     }
