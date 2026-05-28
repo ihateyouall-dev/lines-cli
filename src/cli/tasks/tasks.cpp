@@ -18,10 +18,10 @@
 using namespace Lines::ClientUtils;
 
 namespace {
-template <typename Fn> void with_validation(const Fn &fn) {
+template <typename Fn, typename Exc = std::exception> void with_validation(const Fn &fn) {
     try {
         fn();
-    } catch (const std::exception &e) {
+    } catch (const Exc &e) {
         throw CLI::ValidationError(e.what());
     }
 }
@@ -215,7 +215,8 @@ void Lines::CLI::TasksCmd::addition_callback() {
     });
 
     std::size_t id = _storage.size();
-    std::cout << std::format("Added task:\nID: {}\n{}\n", id + 1, task_str_unfolded(task));
+    std::cout << std::format("Added task:\nID: {}\n{}\n", id + 1,
+                             full_task_str(task, _cfg.cli_use_unicode, _cfg.cli_colorize));
     _storage.add(task);
     _dirty = true;
 }
@@ -262,7 +263,8 @@ void Lines::CLI::TasksCmd::editing_callback() {
             });
         }
     }
-    std::cout << std::format("Edited task:\n{}\n", task_str_unfolded(tmp));
+    std::cout << std::format("Edited task:\n{}\n",
+                             full_task_str(tmp, _cfg.cli_use_unicode, _cfg.cli_colorize));
     if (!_options.force && !_cfg.always_force && !confirm()) {
         return;
     }
@@ -280,12 +282,14 @@ void Lines::CLI::TasksCmd::showing_callback() {
         return;
     }
     if (tasks.size() == 1) {
-        std::cout << std::format("ID: {}\n{}\n", tasks[0].id + 1,
-                                 task_str_unfolded(*tasks[0].task));
+        std::cout << std::format(
+            "ID: {}\n{}\n", tasks[0].id + 1,
+            full_task_str(*tasks[0].task, _cfg.cli_use_unicode, _cfg.cli_colorize));
         return;
     }
     for (const auto &task : tasks) {
-        std::cout << std::format("{}. {}\n", task.id + 1, task_str(*task.task));
+        std::cout << std::format("{}. {}\n", task.id + 1,
+                                 task_str(*task.task, _cfg.cli_use_unicode, _cfg.cli_colorize));
     }
 }
 
@@ -299,12 +303,14 @@ void Lines::CLI::TasksCmd::deletion_callback() {
         return;
     }
     if (tasks.size() == 1) {
-        std::cout << std::format("Task to delete:\nID: {}\n{}\n", tasks[0].id + 1,
-                                 task_str_unfolded(*tasks[0].task));
+        std::cout << std::format(
+            "Task to delete:\nID: {}\n{}\n", tasks[0].id + 1,
+            full_task_str(*tasks[0].task, _cfg.cli_use_unicode, _cfg.cli_colorize));
     } else {
         std::cout << "Tasks to delete:\n";
         for (const auto &task : tasks) {
-            std::cout << std::format("{}. {}\n", task.id + 1, task_str(*task.task));
+            std::cout << std::format("{}. {}\n", task.id + 1,
+                                     task_str(*task.task, _cfg.cli_use_unicode, _cfg.cli_colorize));
         }
     }
 

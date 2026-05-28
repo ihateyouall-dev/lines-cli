@@ -82,16 +82,18 @@ class TasksCmd { // NOLINT
                 return;
             }
             fn(tmp);
-            std::cout << std::format("Task to {}:\nID: {}\n{}\n", action_desc, task.id + 1,
-                                     ClientUtils::task_str_unfolded(tmp));
+            std::cout << std::format(
+                "Task to {}:\nID: {}\n{}\n", action_desc, task.id + 1,
+                ClientUtils::full_task_str(tmp, _cfg.cli_use_unicode, _cfg.cli_colorize));
             if (_options.force || ClientUtils::confirm()) {
                 fn(*task.task);
             }
         } else {
             std::cout << std::format("Tasks to {}\n", action_desc);
             for (const auto &task : tasks) {
-                std::cout << std::format("{}. {}\n", task.id + 1,
-                                         ClientUtils::task_str(*task.task));
+                std::cout << std::format(
+                    "{}. {}\n", task.id + 1,
+                    ClientUtils::task_str(*task.task, _cfg.cli_use_unicode, _cfg.cli_colorize));
             }
             if (_options.force || ClientUtils::confirm()) {
                 for (const auto &task : tasks) {
