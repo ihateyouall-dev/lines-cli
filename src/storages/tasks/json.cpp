@@ -99,7 +99,7 @@ auto Lines::TasksJSON::from_json(const nlohmann::json &json) -> Lines::Task {
             rr.end =
                 ClientUtils::Parsers::parse_timepoint_nv(json["repeat"]["end"].get<std::string>());
         }
-        task.set_repeat_rule(rr);
+        task.set_repeat_rule_raw(rr);
     }
 
     if (completed) {
