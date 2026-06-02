@@ -54,7 +54,7 @@ To build debug version with tests, run:
 ```shell
 git clone https://github.com/ihateyouall-dev/lines-cli.git
 cd lines-cli
-make CMAKE_PRESET=debug-clang CONAN_BUILD_TYPE=Debug
+make BUILD_TYPE=Test
 make test
 ```
 
