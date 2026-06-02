@@ -2,165 +2,60 @@
     "version": 6,
     "configurePresets": [
         {
-            "name": "debug-clang",
-            "displayName": "Debug configuration (Clang libc++)",
-            "generator": "Ninja",
-            "binaryDir": "build/debug/clang",
+            "name": "debug",
+            "displayName": "Debug configuration",
+            "binaryDir": "build",
+            "toolchainFile": "${sourceDir}/build/conan_toolchain.cmake",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Debug"
+            }
+        },
+        {
+            "name": "release",
+            "displayName": "Release configuration",
+            "binaryDir": "build",
+            "toolchainFile": "${sourceDir}/build/conan_toolchain.cmake",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Release"
+            }
+        },
+        {
+            "name": "test",
+            "displayName": "Test configuration",
+            "binaryDir": "build",
             "toolchainFile": "${sourceDir}/build/conan_toolchain.cmake",
             "cacheVariables": {
                 "CMAKE_BUILD_TYPE": "Debug",
-                "CMAKE_CXX_COMPILER": "clang++",
-                "CMAKE_CXX_FLAGS_INIT": "-stdlib=libc++",
-                "LINES_ENABLE_TESTING": "ON"
-            }
-        },
-        {
-            "name": "release-clang",
-            "displayName": "Release configuration (Clang libc++)",
-            "generator": "Ninja",
-            "binaryDir": "build/release/clang",
-            "toolchainFile": "${sourceDir}/build/conan_toolchain.cmake",
-            "cacheVariables": {
-                "CMAKE_BUILD_TYPE": "Release",
-                "CMAKE_CXX_COMPILER": "clang++",
-                "CMAKE_CXX_FLAGS_INIT": "-stdlib=libc++"
-            }
-        },
-        {
-            "name": "debug-gcc",
-            "displayName": "Debug configuration (GCC libstdc++)",
-            "generator": "Ninja",
-            "binaryDir": "build/debug/gcc",
-            "toolchainFile": "${sourceDir}/build/conan_toolchain.cmake",
-            "cacheVariables": {
-                "CMAKE_BUILD_TYPE": "Debug",
-                "CMAKE_CXX_COMPILER": "g++",
-                "LINES_ENABLE_TESTING": "ON"
-            }
-        },
-        {
-            "name": "release-gcc",
-            "displayName": "Release configuration (GCC libstdc++)",
-            "generator": "Ninja",
-            "binaryDir": "build/release/gcc",
-            "toolchainFile": "${sourceDir}/build/conan_toolchain.cmake",
-            "cacheVariables": {
-                "CMAKE_BUILD_TYPE": "Release",
-                "CMAKE_CXX_COMPILER": "g++"
-            }
-        },
-        {
-            "name": "debug-msvc",
-            "displayName": "Debug configuration (MSVC)",
-            "generator": "Visual Studio 17 2022",
-            "binaryDir": "build/debug/msvc",
-            "toolchainFile": "${sourceDir}/build/conan_toolchain.cmake",
-            "cacheVariables": {
-                "CMAKE_BUILD_TYPE": "Debug",
-                "CMAKE_CXX_COMPILER": "cl",
-                "LINES_ENABLE_TESTING": "ON"
-            }
-        },
-        {
-            "name": "release-msvc",
-            "displayName": "Release configuration (MSVC)",
-            "generator": "Visual Studio 17 2022",
-            "binaryDir": "build/release/msvc",
-            "toolchainFile": "${sourceDir}/build/conan_toolchain.cmake",
-            "cacheVariables": {
-                "CMAKE_BUILD_TYPE": "Release",
-                "CMAKE_CXX_COMPILER": "cl"
-            }
-        },
-        {
-            "name": "coverage",
-            "displayName": "Coverage configuration",
-            "generator": "Ninja",
-            "binaryDir": "build/coverage",
-            "cacheVariables": {
-                "CMAKE_BUILD_TYPE": "Debug",
-                "CMAKE_CXX_FLAGS_INIT":
-                    "--coverage -fno-inline -fno-inline-small-functions -fno-default-inline -fno-elide-constructors",
-                "CMAKE_CXX_COMPILER": "g++",
-                "CMAKE_EXE_LINKER_FLAGS": "--coverage",
                 "LINES_ENABLE_TESTING": "ON"
             }
         }
     ],
     "buildPresets": [
         {
-            "name": "debug-clang",
-            "displayName": "Debug build (Clang libc++)",
-            "configurePreset": "debug-clang",
+            "name": "debug",
+            "displayName": "Debug build",
+            "configurePreset": "debug",
             "jobs": 8
         },
         {
-            "name": "release-clang",
-            "displayName": "Release build (Clang libc++)",
-            "configurePreset": "release-clang",
+            "name": "release",
+            "displayName": "Release build",
+            "configurePreset": "release",
             "jobs": 8
         },
         {
-            "name": "debug-gcc",
-            "displayName": "Debug build (GCC libstdc++)",
-            "configurePreset": "debug-gcc",
-            "jobs": 8
-        },
-        {
-            "name": "release-gcc",
-            "displayName": "Release build (GCC libstdc++)",
-            "configurePreset": "release-gcc",
-            "jobs": 8
-        },
-        {
-            "name": "debug-msvc",
-            "displayName": "Debug build (MSVC)",
-            "configurePreset": "debug-msvc",
-            "jobs": 8
-        },
-        {
-            "name": "release-msvc",
-            "displayName": "Release build (MSVC)",
-            "configurePreset": "release-msvc",
-            "jobs": 8
-        },
-        {
-            "name": "coverage",
-            "displayName": "Coverage build",
-            "configurePreset": "coverage",
+            "name": "test",
+            "displayName": "Test build",
+            "configurePreset": "test",
             "jobs": 8
         }
     ],
     "testPresets": [
         {
-            "name": "debug-clang",
-            "displayName": "Debug test (Clang libc++)",
-            "configurePreset": "debug-clang",
-            "output": {
-                "outputOnFailure": true
-            }
-        },
-        {
-            "name": "debug-gcc",
-            "displayName": "Debug test (GCC libstdc++)",
-            "configurePreset": "debug-gcc",
-            "output": {
-                "outputOnFailure": true
-            }
-        },
-        {
-            "name": "debug-msvc",
-            "displayName": "Debug test (MSVC)",
-            "configurePreset": "debug-msvc",
+            "name": "test",
+            "displayName": "Test",
+            "configurePreset": "test",
             "configuration": "Debug",
-            "output": {
-                "outputOnFailure": true
-            }
-        },
-        {
-            "name": "coverage",
-            "displayName": "Coverage test",
-            "configurePreset": "coverage",
             "output": {
                 "outputOnFailure": true
             }
@@ -168,116 +63,48 @@
     ],
     "workflowPresets": [
         {
-            "name": "debug-clang",
-            "displayName": "Debug workflow (Clang libc++)",
+            "name": "debug",
+            "displayName": "Debug workflow",
             "steps": [
                 {
                     "type": "configure",
-                    "name": "debug-clang"
+                    "name": "debug"
                 },
                 {
                     "type": "build",
-                    "name": "debug-clang"
+                    "name": "debug"
+                }
+            ]
+        },
+        {
+            "name": "release",
+            "displayName": "Release workflow",
+            "steps": [
+                {
+                    "type": "configure",
+                    "name": "release"
+                },
+                {
+                    "type": "build",
+                    "name": "release"
+                }
+            ]
+        },
+        {
+            "name": "test",
+            "displayName": "Test workflow",
+            "steps": [
+                {
+                    "type": "configure",
+                    "name": "test"
+                },
+                {
+                    "type": "build",
+                    "name": "test"
                 },
                 {
                     "type": "test",
-                    "name": "debug-clang"
-                }
-            ]
-        },
-        {
-            "name": "release-clang",
-            "displayName": "Release workflow (Clang libc++)",
-            "steps": [
-                {
-                    "type": "configure",
-                    "name": "release-clang"
-                },
-                {
-                    "type": "build",
-                    "name": "release-clang"
-                }
-            ]
-        },
-        {
-            "name": "debug-gcc",
-            "displayName": "Debug workflow (GCC libstdc++)",
-            "steps": [
-                {
-                    "type": "configure",
-                    "name": "debug-gcc"
-                },
-                {
-                    "type": "build",
-                    "name": "debug-gcc"
-                },
-                {
-                    "type": "test",
-                    "name": "debug-gcc"
-                }
-            ]
-        },
-        {
-            "name": "release-gcc",
-            "displayName": "Release workflow (GCC libstdc++)",
-            "steps": [
-                {
-                    "type": "configure",
-                    "name": "release-gcc"
-                },
-                {
-                    "type": "build",
-                    "name": "release-gcc"
-                }
-            ]
-        },
-        {
-            "name": "debug-msvc",
-            "displayName": "Debug workflow (MSVC)",
-            "steps": [
-                {
-                    "type": "configure",
-                    "name": "debug-msvc"
-                },
-                {
-                    "type": "build",
-                    "name": "debug-msvc"
-                },
-                {
-                    "type": "test",
-                    "name": "debug-msvc"
-                }
-            ]
-        },
-        {
-            "name": "release-msvc",
-            "displayName": "Release workflow (MSVC)",
-            "steps": [
-                {
-                    "type": "configure",
-                    "name": "release-msvc"
-                },
-                {
-                    "type": "build",
-                    "name": "release-msvc"
-                }
-            ]
-        },
-        {
-            "name": "coverage",
-            "displayName": "Coverage workflow",
-            "steps": [
-                {
-                    "type": "configure",
-                    "name": "coverage"
-                },
-                {
-                    "type": "build",
-                    "name": "coverage"
-                },
-                {
-                    "type": "test",
-                    "name": "coverage"
+                    "name": "test"
                 }
             ]
         }

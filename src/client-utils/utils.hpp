@@ -15,15 +15,16 @@ auto timepoint_str_s(const Lines::Temporal::TimePoint &tp) -> std::string;
 
 auto tags_str(const Lines::Task &task) -> std::string;
 
-auto completion_sign(const Lines::Task &task) -> std::string;
+auto completion_sign(const Lines::Task &task, bool use_unicode = true, bool colorize = true)
+    -> std::string;
 
-auto deadline_color(const Lines::Temporal::TimePoint &deadline) -> std::string;
+auto due_color(const Lines::Temporal::TimePoint &due) -> std::string;
 
-auto deadline_str(const Lines::Temporal::TimePoint &deadline) -> std::string;
+auto due_str(const Lines::Temporal::TimePoint &due) -> std::string;
 
-auto task_str_unfolded(const Lines::Task &task) -> std::string;
+auto full_task_str(const Lines::Task &task, bool use_unicode, bool colorize) -> std::string;
 
-auto task_str(const Lines::Task &task) -> std::string;
+auto task_str(const Lines::Task &task, bool use_unicode, bool colorize) -> std::string;
 
 auto today() -> Lines::Temporal::Date;
 auto today_str() -> std::string;

@@ -18,39 +18,10 @@
 using namespace Lines::ClientUtils;
 
 namespace {
-void disable_task_repeat_rule(Lines::Task &task) { task.set_repeat_rule(std::nullopt); }
-void disable_task_repeat_end(Lines::Task &task) {
-    if (!task.repeat_rule() || !task.repeat_rule()->end) {
-        throw std::logic_error(
-            "ERROR: Cannot disable repeat end from task without repeat rule or repeat end");
-    }
-    auto rr = *task.repeat_rule();
-    rr.end = std::nullopt;
-    task.set_repeat_rule(rr);
-}
-void disable_task_deadline(Lines::Task &task) {
-    if (task.repeat_rule()) {
-        throw std::logic_error("ERROR: Cannot disable deadline from task with repeat rule");
-    }
-    task.set_deadline(std::nullopt);
-}
-
-void complete_or_advance_deadline(Lines::Task &task) { // NOLINT
-    if (task.repeat_rule()) {
-        task.advance_deadline();
-        // Disabling repeat rule when its end reached
-        if (!task.deadline()) {
-            task.set_repeat_rule(std::nullopt);
-        }
-    } else {
-        task.complete();
-    }
-}
-
-template <typename Fn> void with_validation(const Fn &fn) {
+template <typename Fn, typename Exc = std::exception> void with_validation(const Fn &fn) {
     try {
         fn();
-    } catch (const std::exception &e) {
+    } catch (const Exc &e) {
         throw CLI::ValidationError(e.what());
     }
 }
@@ -63,9 +34,9 @@ void validate_regex(std::string_view regex) {
 }
 } // namespace
 
-Lines::CLI::Tasks::Tasks() { _storage.load_from_file(); }; // NOLINT
+Lines::CLI::TasksCmd::TasksCmd() { _storage.load_from_file(); }; // NOLINT
 
-auto Lines::CLI::Tasks::require_task(std::size_t index) -> Lines::Task * {
+auto Lines::CLI::TasksCmd::require_task(std::size_t index) -> Lines::Task * {
     Lines::Task *result = nullptr;
     try {
         result = &_storage.at(index);
@@ -75,7 +46,7 @@ auto Lines::CLI::Tasks::require_task(std::size_t index) -> Lines::Task * {
     return result;
 }
 
-void Lines::CLI::Tasks::showing_init(::CLI::App &app) {
+void Lines::CLI::TasksCmd::showing_init(::CLI::App &app) {
     auto *show = app.add_subcommand("show", "Show information about tasks");
 
     add_filter_options(*show, "Show");
@@ -83,7 +54,7 @@ void Lines::CLI::Tasks::showing_init(::CLI::App &app) {
     show->callback([this]() -> void { showing_callback(); });
 }
 
-void Lines::CLI::Tasks::addition_init(::CLI::App &app) {
+void Lines::CLI::TasksCmd::addition_init(::CLI::App &app) {
     auto *add = app.add_subcommand("add", "Add the task");
     add->add_option("title", _options.title, "Give task a title")->required();
     add_task_options(*add, "Give task a");
@@ -91,7 +62,7 @@ void Lines::CLI::Tasks::addition_init(::CLI::App &app) {
     add->callback([this]() -> void { addition_callback(); });
 }
 
-void Lines::CLI::Tasks::editing_init(::CLI::App &app) {
+void Lines::CLI::TasksCmd::editing_init(::CLI::App &app) {
     auto *edit = app.add_subcommand("edit", "Edit task");
     edit->add_option("-i,--id", _options.tasks_filter_rule.id, "Edit task with given ID")
         ->required();
@@ -105,7 +76,7 @@ void Lines::CLI::Tasks::editing_init(::CLI::App &app) {
     edit->callback([this]() -> void { editing_callback(); });
 }
 
-void Lines::CLI::Tasks::deletion_init(::CLI::App &app) {
+void Lines::CLI::TasksCmd::deletion_init(::CLI::App &app) {
     auto *delete_app = app.add_subcommand("delete", "Delete tasks");
 
     add_filter_options(*delete_app, "Delete");
@@ -117,7 +88,7 @@ void Lines::CLI::Tasks::deletion_init(::CLI::App &app) {
     delete_app->callback([this]() -> void { deletion_callback(); });
 }
 
-void Lines::CLI::Tasks::completion_init(::CLI::App &app) {
+void Lines::CLI::TasksCmd::completion_init(::CLI::App &app) {
     auto *complete = app.add_subcommand("complete", "Complete tasks");
     auto *uncomplete = app.add_subcommand("uncomplete", "Uncomplete tasks");
 
@@ -131,7 +102,7 @@ void Lines::CLI::Tasks::completion_init(::CLI::App &app) {
     uncomplete->get_option_group("filters")->require_option(1, 0);
 
     complete->callback([this]() -> void {
-        completion_callback([](auto &task) -> void { complete_or_advance_deadline(task); },
+        completion_callback([](auto &task) -> void { task.complete(); },
                             [](const auto &task) -> bool { return task.completed(); }, "complete");
     });
     uncomplete->callback([this]() -> void {
@@ -141,7 +112,7 @@ void Lines::CLI::Tasks::completion_init(::CLI::App &app) {
     });
 }
 
-void Lines::CLI::Tasks::init(::CLI::App &app) {
+void Lines::CLI::TasksCmd::init(::CLI::App &app) {
     auto *tasks = app.add_subcommand("tasks", "Work with tasks");
     addition_init(*tasks);
     completion_init(*tasks);
@@ -150,14 +121,14 @@ void Lines::CLI::Tasks::init(::CLI::App &app) {
     editing_init(*tasks);
 }
 
-void Lines::CLI::Tasks::save() {
+void Lines::CLI::TasksCmd::save() {
     _storage.save_to_file();
     _dirty = false;
 }
 
-auto Lines::CLI::Tasks::dirty() const -> bool { return _dirty; };
+auto Lines::CLI::TasksCmd::dirty() const -> bool { return _dirty; };
 
-void Lines::CLI::Tasks::add_filter_options(::CLI::App &app, std::string_view desc_prefix) {
+void Lines::CLI::TasksCmd::add_filter_options(::CLI::App &app, std::string_view desc_prefix) {
     auto *filters = app.add_option_group("filters");
     filters->add_option("-i,--id", _options.tasks_filter_rule.id,
                         std::format("{} task with given id", desc_prefix));
@@ -196,20 +167,19 @@ void Lines::CLI::Tasks::add_filter_options(::CLI::App &app, std::string_view des
     // Time point specific filters
     filters
         ->add_option_function<std::string>(
-            "-D,--deadline",
+            "-D,--due",
             [this](const std::string &date) -> void {
                 with_validation([&]() -> void {
-                    _options.tasks_filter_rule.deadline = Parsers::parse_timepoint(date);
+                    _options.tasks_filter_rule.due = Parsers::parse_timepoint(date);
                 });
             },
-            std::format("{} task with given deadline (format: YYYY.MM.DD_[HH:MM[:SS]])",
-                        desc_prefix))
+            std::format("{} task with given due (format: YYYY.MM.DD_[HH:MM[:SS]])", desc_prefix))
         ->type_name("TIMEPOINT");
 
     auto active_callback = [this](bool b) { // NOLINT
         return [this, b]() -> void {
             _options.tasks_filter_rule.active_bool = b;
-            _options.tasks_filter_rule.active_deadline = Lines::Temporal::LocalClock::now();
+            _options.tasks_filter_rule.active_due = Lines::Temporal::LocalClock::now();
         };
     };
     filters->add_flag_callback("--ac,--active", active_callback(true),
@@ -218,11 +188,11 @@ void Lines::CLI::Tasks::add_filter_options(::CLI::App &app, std::string_view des
                                std::format("{} only expired tasks", desc_prefix));
 }
 
-void Lines::CLI::Tasks::add_force_flag(::CLI::App &app, std::string_view desc_postfix) {
+void Lines::CLI::TasksCmd::add_force_flag(::CLI::App &app, std::string_view desc_postfix) {
     app.add_flag("-f,--force", _options.force, std::format("Force {}", desc_postfix));
 }
 
-void Lines::CLI::Tasks::addition_callback() {
+void Lines::CLI::TasksCmd::addition_callback() {
     if (!_options.title) {
         throw ::CLI::ValidationError("ERROR: Task title cannot be empty");
     }
@@ -231,26 +201,31 @@ void Lines::CLI::Tasks::addition_callback() {
                                      _options.tags.value_or(std::vector<std::string>{})}};
 
     with_validation([&]() -> void {
-        if (_options.deadline) {
-            task.set_deadline(Parsers::parse_timepoint(*_options.deadline));
+        if (_options.due) {
+            task.set_due(Parsers::parse_timepoint(*_options.due));
         }
 
         if (_options.repeat_rule) {
-            enable_task_repeat_rule(task);
+            with_validation([&]() -> void {
+                task.set_repeat_rule(Parsers::parse_repeat_rule(*_options.repeat_rule));
+            });
         }
 
         if (_options.repeat_end) {
-            enable_task_repeat_end(task);
+            with_validation([&]() -> void {
+                task.set_repeat_end(Parsers::parse_timepoint(*_options.repeat_end));
+            });
         }
     });
 
     std::size_t id = _storage.size();
-    std::cout << std::format("Added task:\nID: {}\n{}\n", id + 1, task_str_unfolded(task));
+    std::cout << std::format("Added task:\nID: {}\n{}\n", id + 1,
+                             full_task_str(task, _cfg.cli_use_unicode, _cfg.cli_colorize));
     _storage.add(task);
     _dirty = true;
 }
 
-void Lines::CLI::Tasks::editing_callback() {
+void Lines::CLI::TasksCmd::editing_callback() {
     auto *task = require_task(*_options.tasks_filter_rule.id - 1);
     if (task == nullptr) {
         return;
@@ -265,40 +240,43 @@ void Lines::CLI::Tasks::editing_callback() {
     if (_options.tags) {
         tmp.set_tags(*_options.tags);
     }
-    if (_options.deadline) {
-        if (*_options.deadline == disable) {
-            with_validation([&]() -> void { disable_task_deadline(tmp); });
+    if (_options.due) {
+        if (*_options.due == disable) {
+            with_validation([&]() -> void { tmp.set_due(std::nullopt); });
         } else {
             with_validation(
-                [&]() -> void { tmp.set_deadline(Parsers::parse_timepoint(*_options.deadline)); });
+                [&]() -> void { tmp.set_due(Parsers::parse_timepoint(*_options.due)); });
         }
     }
     if (_options.repeat_rule) {
         if (_options.repeat_rule == disable) {
-            disable_task_repeat_rule(tmp);
+            tmp.set_repeat_rule(std::nullopt);
         } else {
             with_validation([&]() -> void {
                 tmp.uncomplete();
-                enable_task_repeat_rule(tmp);
+                tmp.set_repeat_rule(Parsers::parse_repeat_rule(*_options.repeat_rule));
             });
         }
     }
     if (_options.repeat_end) {
         if (*_options.repeat_end == disable) {
-            with_validation([&]() -> void { disable_task_repeat_end(tmp); });
+            with_validation([&]() -> void { tmp.set_repeat_end(std::nullopt); });
         } else {
-            with_validation([&]() -> void { enable_task_repeat_end(tmp); });
+            with_validation([&]() -> void {
+                tmp.set_repeat_end(Parsers::parse_timepoint(*_options.repeat_end));
+            });
         }
     }
-    std::cout << std::format("Edited task:\n{}\n", task_str_unfolded(tmp));
-    if (!_options.force && !confirm()) {
+    std::cout << std::format("Edited task:\n{}\n",
+                             full_task_str(tmp, _cfg.cli_use_unicode, _cfg.cli_colorize));
+    if (!_options.force && !_cfg.always_force && !confirm()) {
         return;
     }
     *task = tmp;
     _dirty = true;
 }
 
-void Lines::CLI::Tasks::showing_callback() {
+void Lines::CLI::TasksCmd::showing_callback() {
     if (_options.tasks_filter_rule.id) {
         --*_options.tasks_filter_rule.id;
     }
@@ -308,16 +286,18 @@ void Lines::CLI::Tasks::showing_callback() {
         return;
     }
     if (tasks.size() == 1) {
-        std::cout << std::format("ID: {}\n{}\n", tasks[0].id + 1,
-                                 task_str_unfolded(*tasks[0].task));
+        std::cout << std::format(
+            "ID: {}\n{}\n", tasks[0].id + 1,
+            full_task_str(*tasks[0].task, _cfg.cli_use_unicode, _cfg.cli_colorize));
         return;
     }
     for (const auto &task : tasks) {
-        std::cout << std::format("{}. {}\n", task.id + 1, task_str(*task.task));
+        std::cout << std::format("{}. {}\n", task.id + 1,
+                                 task_str(*task.task, _cfg.cli_use_unicode, _cfg.cli_colorize));
     }
 }
 
-void Lines::CLI::Tasks::deletion_callback() {
+void Lines::CLI::TasksCmd::deletion_callback() {
     if (_options.tasks_filter_rule.id) {
         --*_options.tasks_filter_rule.id;
     }
@@ -327,18 +307,19 @@ void Lines::CLI::Tasks::deletion_callback() {
         return;
     }
     if (tasks.size() == 1) {
-        std::cout << std::format("Task to delete:\nID: {}\n{}\n", tasks[0].id + 1,
-                                 task_str_unfolded(*tasks[0].task));
+        std::cout << std::format(
+            "Task to delete:\nID: {}\n{}\n", tasks[0].id + 1,
+            full_task_str(*tasks[0].task, _cfg.cli_use_unicode, _cfg.cli_colorize));
     } else {
         std::cout << "Tasks to delete:\n";
         for (const auto &task : tasks) {
-            std::cout << std::format("{}. {}\n", task.id + 1, task_str(*task.task));
+            std::cout << std::format("{}. {}\n", task.id + 1,
+                                     task_str(*task.task, _cfg.cli_use_unicode, _cfg.cli_colorize));
         }
     }
 
-    if (!_options.force) {
-        bool confirmed = confirm();
-        if (!confirmed) {
+    if (!_options.force && !_cfg.always_force) {
+        if (!confirm()) {
             return;
         }
     }
@@ -349,14 +330,14 @@ void Lines::CLI::Tasks::deletion_callback() {
     _dirty = true;
 }
 
-void Lines::CLI::Tasks::add_task_options(::CLI::App &app, std::string_view desc_prefix, // NOLINT
-                                         const TaskOptionsFormats &formats) {
+void Lines::CLI::TasksCmd::add_task_options(::CLI::App &app, std::string_view desc_prefix, // NOLINT
+                                            const TaskOptionsFormats &formats) {
     app.add_option("-d,--description", _options.description,
                    std::format("{} description", desc_prefix));
     app.add_option("-t,--tags", _options.tags, std::format("{} tags", desc_prefix));
 
-    app.add_option("-D,--deadline", _options.deadline,
-                   std::format("{} planned deadline. Format: {}{}", desc_prefix,
+    app.add_option("-D,--due", _options.due,
+                   std::format("{} planned due. Format: {}{}", desc_prefix,
                                formats.timepoint_format, formats.disabling_annot))
         ->type_name("TIMEPOINT");
     app.add_option("-R,--repeat", _options.repeat_rule,
@@ -366,22 +347,4 @@ void Lines::CLI::Tasks::add_task_options(::CLI::App &app, std::string_view desc_
                    std::format("{} end of repeat{}", desc_prefix, formats.disabling_annot))
         ->type_name("TIMEPOINT");
 }
-
-void Lines::CLI::Tasks::enable_task_repeat_rule(Lines::Task &task) {
-    Lines::TaskRepeatRule rr;
-    rr = Parsers::parse_repeat_rule(*_options.repeat_rule);
-    task.set_repeat_rule(rr);
-    if (!task.deadline()) {
-        task.set_deadline(Lines::Temporal::LocalClock::now());
-    }
-    task.advance_deadline();
-}
-
-void Lines::CLI::Tasks::enable_task_repeat_end(Lines::Task &task) {
-    if (!task.repeat_rule()) {
-        throw std::logic_error("ERROR: Cannot give repeat end to task without repeat rule");
-    }
-    Lines::TaskRepeatRule rr = *task.repeat_rule();
-    rr.end = Lines::ClientUtils::Parsers::parse_timepoint(*_options.repeat_end);
-    task.set_repeat_rule(rr);
-}
+void Lines::CLI::TasksCmd::set_config(const ClientUtils::Config &cfg) { _cfg = cfg; }

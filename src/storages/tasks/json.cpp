@@ -18,8 +18,8 @@ auto Lines::TasksJSON::to_json(const Lines::Task &task) -> nlohmann::json {
     if (task.description()) {
         result["description"] = task.description();
     }
-    if (task.deadline()) {
-        result["deadline"] = Lines::ClientUtils::timepoint_str_s(*task.deadline());
+    if (task.due()) {
+        result["due"] = Lines::ClientUtils::timepoint_str_s(*task.due());
     }
 
     for (const auto &tag : task.tags()) {
@@ -30,12 +30,12 @@ auto Lines::TasksJSON::to_json(const Lines::Task &task) -> nlohmann::json {
         auto rr = *task.repeat_rule();
         static constexpr int EVERY_UNIT_T = 0;
         static constexpr int EVERY_WEEKDAY_T = 1;
-        try {
+        if (std::holds_alternative<Lines::TaskRepeat::EveryUnit>(rr.repeat_type)) {
             auto rtype = std::get<Lines::TaskRepeat::EveryUnit>(rr.repeat_type);
             result["repeat"]["type"] = EVERY_UNIT_T;
             result["repeat"]["interval"] = rtype.interval.count();
             result["repeat"]["unit"] = rtype.unit_str;
-        } catch (std::bad_variant_access &) {
+        } else {
             auto rtype = std::get<Lines::TaskRepeat::EveryWeekday>(rr.repeat_type);
             result["repeat"]["type"] = EVERY_WEEKDAY_T;
             result["repeat"]["weekdays"] = rtype.weekdays;
@@ -68,9 +68,9 @@ auto Lines::TasksJSON::from_json(const nlohmann::json &json) -> Lines::Task {
 
     Lines::Task task(info);
 
-    if (json.contains("deadline")) {
-        task.set_deadline(
-            Lines::ClientUtils::Parsers::parse_timepoint_nv(json["deadline"].get<std::string>()));
+    if (json.contains("due")) {
+        task.set_due(
+            Lines::ClientUtils::Parsers::parse_timepoint_nv(json["due"].get<std::string>()));
     }
 
     if (json.contains("repeat")) {
@@ -99,7 +99,7 @@ auto Lines::TasksJSON::from_json(const nlohmann::json &json) -> Lines::Task {
             rr.end =
                 ClientUtils::Parsers::parse_timepoint_nv(json["repeat"]["end"].get<std::string>());
         }
-        task.set_repeat_rule(rr);
+        task.set_repeat_rule_raw(rr);
     }
 
     if (completed) {
@@ -129,8 +129,6 @@ void Lines::TasksJSONStorage::load_from_file() {
     load_from_json(json);
 }
 
-auto Lines::TasksJSONStorage::tasks() -> std::vector<Task> & { return _tasks; }
-
 auto Lines::TasksJSONStorage::tasks() const -> const std::vector<Task> & { return _tasks; }
 
 auto Lines::TasksJSONStorage::to_json() const -> nlohmann::json {
@@ -146,7 +144,7 @@ void Lines::TasksJSONStorage::save_to_file() const {
     std::ofstream fs(_file);
 
     if (!fs) {
-        throw std::runtime_error("Lines::TasksJSONStorage::load_from_file: cannot open file: " +
+        throw std::runtime_error("Lines::TasksJSONStorage::save_to_file: cannot open file: " +
                                  _file.string());
     }
 

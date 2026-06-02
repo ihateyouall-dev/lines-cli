@@ -1,8 +1,9 @@
+#include "client-utils/config.hpp"
+#include "client-utils/filesystem.hpp"
 #include "client-utils/utils.hpp"
 #include "filter.hpp"
 #include "lines/tasks/task.hpp"
 #include "storages/tasks/json.hpp"
-#include "storages/utils/filesystem.hpp"
 
 #include <iostream>
 #include <string>
@@ -12,14 +13,14 @@ class App;
 }
 
 namespace Lines::CLI {
-class Tasks { // NOLINT
+class TasksCmd { // NOLINT
     // Options that gained from command line
     struct Options {
         std::optional<std::string> title;
         std::optional<std::string> description;
         std::optional<std::vector<std::string>> tags;
 
-        std::optional<std::string> deadline;
+        std::optional<std::string> due;
 
         bool force = false;
 
@@ -28,16 +29,15 @@ class Tasks { // NOLINT
 
         TasksFilter::TasksFilterRule tasks_filter_rule;
     } _options;
-    Lines::TasksJSONStorage _storage{Lines::detail::get_fs_home() / ".lines.d" / "saves" /
-                                     "tasks.json"};
+    TasksJSONStorage _storage{ClientUtils::get_fs_home() / ".lines.d" / "saves" / "tasks.json"};
+
+    ClientUtils::Config _cfg;
     std::string timepoint_format = "YYYY/MM/DD[_HH:MM[:SS]]";
     const std::string disable = "none"; // NOLINT
 
     bool _dirty = false;
 
     auto require_task(std::size_t index) -> Lines::Task *;
-    void enable_task_repeat_rule(Lines::Task &task);
-    void enable_task_repeat_end(Lines::Task &task);
 
     struct TaskOptionsFormats {
         std::string timepoint_format;
@@ -82,16 +82,18 @@ class Tasks { // NOLINT
                 return;
             }
             fn(tmp);
-            std::cout << std::format("Task to {}:\nID: {}\n{}\n", action_desc, task.id + 1,
-                                     ClientUtils::task_str_unfolded(tmp));
+            std::cout << std::format(
+                "Task to {}:\nID: {}\n{}\n", action_desc, task.id + 1,
+                ClientUtils::full_task_str(tmp, _cfg.cli_use_unicode, _cfg.cli_colorize));
             if (_options.force || ClientUtils::confirm()) {
                 fn(*task.task);
             }
         } else {
             std::cout << std::format("Tasks to {}\n", action_desc);
             for (const auto &task : tasks) {
-                std::cout << std::format("{}. {}\n", task.id + 1,
-                                         ClientUtils::task_str(*task.task));
+                std::cout << std::format(
+                    "{}. {}\n", task.id + 1,
+                    ClientUtils::task_str(*task.task, _cfg.cli_use_unicode, _cfg.cli_colorize));
             }
             if (_options.force || ClientUtils::confirm()) {
                 for (const auto &task : tasks) {
@@ -103,16 +105,17 @@ class Tasks { // NOLINT
     }
 
   public:
-    Tasks();
-    Tasks(Tasks &&) = delete;
+    TasksCmd();
+    TasksCmd(TasksCmd &&) = delete;
 
-    auto operator=(Tasks &&) -> Tasks & = delete;
+    auto operator=(TasksCmd &&) -> TasksCmd & = delete;
 
     void init(::CLI::App &app);
 
     void save();
+    void set_config(const ClientUtils::Config &cfg);
     [[nodiscard]] auto dirty() const -> bool;
 
-    ~Tasks() = default;
+    ~TasksCmd() = default;
 };
 } // namespace Lines::CLI

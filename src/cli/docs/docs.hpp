@@ -7,7 +7,7 @@ class App;
 }
 
 namespace Lines::CLI {
-class Docs {
+class DocsCmd {
     std::string manual;
 
   public:

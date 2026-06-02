@@ -28,9 +28,9 @@ auto Lines::TasksFilter::filter(Lines::TasksJSONStorage &storage, const TasksFil
             !rule.any_tag || std::ranges::any_of(*rule.any_tag, [&](const auto &tag) -> auto {
                 return has_tag(task, tag);
             });
-        bool satisfying_date = !rule.deadline || *task.deadline() == *rule.deadline;
+        bool satisfying_date = !rule.due || *task.due() == *rule.due;
         bool satisfying_active =
-            !rule.active_bool || task.is_active(*rule.active_deadline) == *rule.active_bool;
+            !rule.active_bool || task.is_active(*rule.active_due) == *rule.active_bool;
         bool matches_title_regex =
             !rule.title_regex || re2::RE2::FullMatch(task.title(), *rule.title_regex);
         bool matches_partial_title_regex =

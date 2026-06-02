@@ -19,6 +19,7 @@
 #include <string>
 #include <string_view>
 #include <unordered_map>
+#include <unordered_set>
 #include <vector>
 
 void Lines::ClientUtils::Parsers::throw_range_error(std::string_view prefix,
@@ -491,5 +492,19 @@ See "lines-cli docs repeat" for more info)");
     Lines::TaskRepeatRule res;
     res.repeat_type = Lines::TaskRepeat::EveryWeekday{.weekdays = parse_repeat_weekdays(str)};
     return res;
+}
+
+template <> auto parse<bool>(const std::string &str) -> bool {
+    std::string lstr = to_lower_str(str);
+
+    if (lstr == "true" || lstr == "t" || lstr == "on" || lstr == "yes" || lstr == "y" ||
+        lstr == "1") {
+        return true;
+    }
+    if (lstr == "false" || lstr == "f" || lstr == "off" || lstr == "no" || lstr == "n" ||
+        lstr == "0") {
+        return false;
+    }
+    throw std::invalid_argument("ERROR: Invalid boolean value");
 }
 } // namespace Lines::ClientUtils::Parsers
