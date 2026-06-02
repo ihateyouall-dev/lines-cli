@@ -1,11 +1,23 @@
 .PHONY: all build clean test
 
-CMAKE_CONFIGURE_PRESET ?= conan-release
-CMAKE_PRESET ?= conan-release
+CMAKE_PRESET ?= release
+CMAKE_CONFIGURE_PRESET ?= $(CMAKE_PRESET)
 CONAN_BUILD_TYPE ?= Release
 BUILD_DIR ?= build
+BUILD_TYPE ?= Release
 
-all: build
+.ONESHELL:
+
+ifeq ($(BUILD_TYPE),Debug)
+CMAKE_PRESET := debug
+CONAN_BUILD_TYPE := Debug
+else ifeq ($(BUILD_TYPE),Test)
+CMAKE_PRESET := test
+CONAN_BUILD_TYPE := Debug
+else ifeq ($(BUILD_TYPE),Coverage)
+CMAKE_PRESET := coverage
+CONAN_BUILD_TYPE := Debug
+endif
 
 # On Windows, Conan generates 'conan-default' configure preset instead of 'conan-release'
 ifeq ($(OS),Windows_NT)
@@ -13,6 +25,8 @@ ifeq ($(CMAKE_CONFIGURE_PRESET),conan-release)
 CMAKE_CONFIGURE_PRESET := conan-default
 endif
 endif
+
+all: build
 
 configure: CMakeLists.txt CMakePresets.json install-deps
 	cmake --preset $(CMAKE_CONFIGURE_PRESET)
@@ -28,13 +42,14 @@ $(HOME)/.conan2/profiles/default:
 	conan profile detect --force
 
 test:
-	ctest --preset $(CMAKE_PRESET)
+	ctest --preset test
 
 install:
 	cmake --install $(BUILD_DIR)
 
 package: build
-	cd $(BUILD_DIR) && cpack
+	cd $(BUILD_DIR)
+	cpack
 
 clean:
 	rm -rf $(BUILD_DIR)

@@ -29,17 +29,12 @@ jobs:
       - name: Detect profile
         run: conan profile detect --force
 
-      - name: Install deps
-        run: make install-deps CONAN_BUILD_TYPE=Debug
-
-      - name: Configure
-        run: cmake --preset debug-gcc
-
       - name: Build
-        run: cmake --build --preset debug-gcc
+        run: make BUILD_TYPE=Test
 
       - name: Test
-        run: ctest --preset debug-gcc
+        run: make test
+
   macOS:
     runs-on: macos-latest
 
@@ -64,17 +59,12 @@ jobs:
       - name: Detect profile
         run: conan profile detect --force
 
-      - name: Install deps
-        run: make install-deps CONAN_BUILD_TYPE=Debug
-
-      - name: Configure
-        run: cmake --preset debug-clang
-
       - name: Build
-        run: cmake --build --preset debug-clang
+        run: make BUILD_TYPE=Test
 
       - name: Test
-        run: ctest --preset debug-clang
+        run: make test
+
   Windows:
     runs-on: windows-latest
 
@@ -102,14 +92,8 @@ jobs:
       - name: Detect profile
         run: conan profile detect --force
 
-      - name: Install deps
-        run: make install-deps CONAN_BUILD_TYPE=Debug
-
-      - name: Configure
-        run: cmake --preset debug-msvc
-
       - name: Build
-        run: cmake --build --preset debug-msvc
+        run: make BUILD_TYPE=Test
 
       - name: Test
-        run: ctest --preset debug-msvc
+        run: make test
