@@ -76,16 +76,16 @@ void Lines::CLI::TasksCmd::editing_init(::CLI::App &app) {
     edit->callback([this]() -> void { editing_callback(); });
 }
 
-void Lines::CLI::TasksCmd::deletion_init(::CLI::App &app) {
-    auto *delete_app = app.add_subcommand("delete", "Delete tasks");
+void Lines::CLI::TasksCmd::removing_init(::CLI::App &app) {
+    auto *remove = app.add_subcommand("remove", "Remove tasks")->alias("rm");
 
-    add_filter_options(*delete_app, "Delete");
+    add_filter_options(*remove, "Remove");
 
-    delete_app->get_option_group("filters")->require_option(1, 0);
+    remove->get_option_group("filters")->require_option(1, 0);
 
-    add_force_flag(*delete_app, "deletion");
+    add_force_flag(*remove, "removing");
 
-    delete_app->callback([this]() -> void { deletion_callback(); });
+    remove->callback([this]() -> void { removing_callback(); });
 }
 
 void Lines::CLI::TasksCmd::completion_init(::CLI::App &app) {
@@ -117,7 +117,7 @@ void Lines::CLI::TasksCmd::init(::CLI::App &app) {
     addition_init(*tasks);
     completion_init(*tasks);
     showing_init(*tasks);
-    deletion_init(*tasks);
+    removing_init(*tasks);
     editing_init(*tasks);
 }
 
@@ -297,7 +297,7 @@ void Lines::CLI::TasksCmd::showing_callback() {
     }
 }
 
-void Lines::CLI::TasksCmd::deletion_callback() {
+void Lines::CLI::TasksCmd::removing_callback() {
     if (_options.tasks_filter_rule.id) {
         --*_options.tasks_filter_rule.id;
     }
@@ -308,10 +308,10 @@ void Lines::CLI::TasksCmd::deletion_callback() {
     }
     if (tasks.size() == 1) {
         std::cout << std::format(
-            "Task to delete:\nID: {}\n{}\n", tasks[0].id + 1,
+            "Task to remove:\nID: {}\n{}\n", tasks[0].id + 1,
             full_task_str(*tasks[0].task, _cfg.cli_use_unicode, _cfg.cli_colorize));
     } else {
-        std::cout << "Tasks to delete:\n";
+        std::cout << "Tasks to remove:\n";
         for (const auto &task : tasks) {
             std::cout << std::format("{}. {}\n", task.id + 1,
                                      task_str(*task.task, _cfg.cli_use_unicode, _cfg.cli_colorize));
