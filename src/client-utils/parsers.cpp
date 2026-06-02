@@ -19,6 +19,7 @@
 #include <string>
 #include <string_view>
 #include <unordered_map>
+#include <unordered_set>
 #include <vector>
 
 void Lines::ClientUtils::Parsers::throw_range_error(std::string_view prefix,
@@ -496,15 +497,12 @@ See "lines-cli docs repeat" for more info)");
 template <> auto parse<bool>(const std::string &str) -> bool {
     std::string lstr = to_lower_str(str);
 
-    static std::array<std::string, 5> true_values{"true", "t", "on", "yes", "1"};
-    static std::array<std::string, 5> false_values{"false", "f", "off", "no", "0"};
-
-    const auto tpos = std::ranges::find(true_values, lstr);
-    if (tpos != std::end(true_values)) {
+    if (lstr == "true" || lstr == "t" || lstr == "on" || lstr == "yes" || lstr == "y" ||
+        lstr == "1") {
         return true;
     }
-    const auto fpos = std::ranges::find(false_values, lstr);
-    if (fpos != std::end(false_values)) {
+    if (lstr == "false" || lstr == "f" || lstr == "off" || lstr == "no" || lstr == "n" ||
+        lstr == "0") {
         return false;
     }
     throw std::invalid_argument("ERROR: Invalid boolean value");

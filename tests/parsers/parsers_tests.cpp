@@ -5,7 +5,6 @@
 #include "lines/temporal/duration.hpp"
 #include "lines/temporal/timepoint.hpp"
 #include "lines/temporal/timestamp.hpp"
-#include "lines/temporal/ymd.hpp"
 
 #include "gtest/gtest.h"
 #include <cstddef>
@@ -223,4 +222,22 @@ TEST(Parsers, RepeatRule) {
                        Lines::Temporal::Weekday::Monday, Lines::Temporal::Weekday::Wednesday,
                        Lines::Temporal::Weekday::Thursday, Lines::Temporal::Weekday::Friday,
                        Lines::Temporal::Weekday::Saturday}));
+}
+
+TEST(Parsers, Bool) {
+    EXPECT_TRUE(parse<bool>("true"));
+    EXPECT_TRUE(parse<bool>("t"));
+    EXPECT_TRUE(parse<bool>("yes"));
+    EXPECT_TRUE(parse<bool>("y"));
+    EXPECT_TRUE(parse<bool>("on"));
+    EXPECT_TRUE(parse<bool>("1"));
+
+    EXPECT_FALSE(parse<bool>("false"));
+    EXPECT_FALSE(parse<bool>("f"));
+    EXPECT_FALSE(parse<bool>("no"));
+    EXPECT_FALSE(parse<bool>("n"));
+    EXPECT_FALSE(parse<bool>("off"));
+    EXPECT_FALSE(parse<bool>("0"));
+
+    EXPECT_THROW(parse<bool>("abcd"), std::invalid_argument);
 }
