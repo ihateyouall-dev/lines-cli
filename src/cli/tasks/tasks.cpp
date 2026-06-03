@@ -41,41 +41,31 @@ void make_frontend_id(std::size_t &id) { ++id; }
 
 Lines::CLI::TasksCmd::TasksCmd() { _storage.load_from_file(); }; // NOLINT
 
-auto Lines::CLI::TasksCmd::require_task(std::size_t index) -> Lines::Task * {
-    Lines::Task *result = nullptr;
-    try {
-        result = &_storage.at(index);
-    } catch (const std::out_of_range &) {
-        std::cerr << "ERROR: Task not found\n";
-    }
-    return result;
-}
-
-void Lines::CLI::TasksCmd::list_init(::CLI::App &app) {
+void Lines::CLI::TasksCmd::listcmd_init(::CLI::App &app) {
     auto *list = app.add_subcommand("list", "List tasks")->alias("ls");
 
     add_filter_options(*list, "List");
 
-    list->callback([this]() -> void { list_callback(); });
+    list->callback([this]() -> void { listcmd_callback(); });
 }
 
-void Lines::CLI::TasksCmd::show_init(::CLI::App &app) {
+void Lines::CLI::TasksCmd::showcmd_init(::CLI::App &app) {
     auto *show = app.add_subcommand("show", "Show info about the task")->alias("s");
 
     show->add_option("ID", _options.tasks_filter_rule.id, "ID of the task to show")->required();
 
-    show->callback([this]() -> void { show_callback(); });
+    show->callback([this]() -> void { showcmd_callback(); });
 }
 
-void Lines::CLI::TasksCmd::addition_init(::CLI::App &app) {
+void Lines::CLI::TasksCmd::addcmd_init(::CLI::App &app) {
     auto *add = app.add_subcommand("add", "Add the task");
     add->add_option("title", _options.title, "Give task a title")->required();
     add_task_options(*add, "Give task a");
 
-    add->callback([this]() -> void { addition_callback(); });
+    add->callback([this]() -> void { addcmd_callback(); });
 }
 
-void Lines::CLI::TasksCmd::set_init(::CLI::App &app) {
+void Lines::CLI::TasksCmd::setcmd_init(::CLI::App &app) {
     auto *set = app.add_subcommand("set", "Edit tasks");
     set->add_option("--title", _options.title, "Give task a new title");
     set->add_option("ID", _options.tasks_filter_rule.id, "ID of task to edit");
@@ -85,10 +75,10 @@ void Lines::CLI::TasksCmd::set_init(::CLI::App &app) {
                                         .disabling_annot = ". Enter \'none\' to disable it"});
     add_force_flag(*set, "editing");
 
-    set->callback([this]() -> void { set_callback(); });
+    set->callback([this]() -> void { setcmd_callback(); });
 }
 
-void Lines::CLI::TasksCmd::remove_init(::CLI::App &app) {
+void Lines::CLI::TasksCmd::removecmd_init(::CLI::App &app) {
     auto *remove = app.add_subcommand("remove", "Remove tasks")->alias("rm");
 
     add_filter_options(*remove, "Remove");
@@ -97,10 +87,10 @@ void Lines::CLI::TasksCmd::remove_init(::CLI::App &app) {
 
     add_force_flag(*remove, "removing");
 
-    remove->callback([this]() -> void { remove_callback(); });
+    remove->callback([this]() -> void { removecmd_callback(); });
 }
 
-void Lines::CLI::TasksCmd::completion_init(::CLI::App &app) {
+void Lines::CLI::TasksCmd::completecmd_init(::CLI::App &app) {
     auto *complete = app.add_subcommand("complete", "Complete tasks");
     auto *uncomplete = app.add_subcommand("uncomplete", "Uncomplete tasks");
 
@@ -114,24 +104,24 @@ void Lines::CLI::TasksCmd::completion_init(::CLI::App &app) {
     uncomplete->get_option_group("filters")->require_option(1, 0);
 
     complete->callback([this]() -> void {
-        completion_callback([](auto &task) -> void { task.complete(); },
-                            [](const auto &task) -> bool { return task.completed(); }, "complete");
+        completecmd_callback([](auto &task) -> void { task.complete(); },
+                             [](const auto &task) -> bool { return task.completed(); }, "complete");
     });
     uncomplete->callback([this]() -> void {
-        completion_callback([](auto &task) -> void { task.uncomplete(); },
-                            [](const auto &task) -> bool { return !task.completed(); },
-                            "uncomplete");
+        completecmd_callback([](auto &task) -> void { task.uncomplete(); },
+                             [](const auto &task) -> bool { return !task.completed(); },
+                             "uncomplete");
     });
 }
 
 void Lines::CLI::TasksCmd::init(::CLI::App &app) {
     auto *tasks = app.add_subcommand("tasks", "Work with tasks");
-    addition_init(*tasks);
-    completion_init(*tasks);
-    list_init(*tasks);
-    show_init(*tasks);
-    remove_init(*tasks);
-    set_init(*tasks);
+    addcmd_init(*tasks);
+    completecmd_init(*tasks);
+    listcmd_init(*tasks);
+    showcmd_init(*tasks);
+    removecmd_init(*tasks);
+    setcmd_init(*tasks);
 }
 
 void Lines::CLI::TasksCmd::save() {
@@ -205,7 +195,7 @@ void Lines::CLI::TasksCmd::add_force_flag(::CLI::App &app, std::string_view desc
     app.add_flag("-f,--force", _options.force, std::format("Force {}", desc_postfix));
 }
 
-void Lines::CLI::TasksCmd::addition_callback() {
+void Lines::CLI::TasksCmd::addcmd_callback() {
     if (!_options.title) {
         throw ::CLI::ValidationError("ERROR: Task title cannot be empty");
     }
@@ -238,11 +228,16 @@ void Lines::CLI::TasksCmd::addition_callback() {
     _dirty = true;
 }
 
-void Lines::CLI::TasksCmd::set_callback() {
-    auto *task = require_task(*_options.tasks_filter_rule.id - 1);
-    if (task == nullptr) {
+void Lines::CLI::TasksCmd::setcmd_callback() {
+    Lines::Task *task = nullptr;
+
+    try {
+        task = &_storage.at(backend_id(*_options.tasks_filter_rule.id));
+    } catch (const std::exception &e) {
+        std::cerr << "ERROR: Task not found\n";
         return;
     }
+
     auto tmp = *task;
     if (_options.title) {
         tmp.set_title(*_options.title);
@@ -289,7 +284,7 @@ void Lines::CLI::TasksCmd::set_callback() {
     _dirty = true;
 }
 
-void Lines::CLI::TasksCmd::remove_callback() {
+void Lines::CLI::TasksCmd::removecmd_callback() {
     if (_options.tasks_filter_rule.id) {
         make_backend_id(*_options.tasks_filter_rule.id);
     }
@@ -317,7 +312,7 @@ void Lines::CLI::TasksCmd::remove_callback() {
     _dirty = true;
 }
 
-void Lines::CLI::TasksCmd::list_callback() {
+void Lines::CLI::TasksCmd::listcmd_callback() {
     if (_options.tasks_filter_rule.id) {
         make_backend_id(*_options.tasks_filter_rule.id);
     }
@@ -332,7 +327,7 @@ void Lines::CLI::TasksCmd::list_callback() {
     }
 }
 
-void Lines::CLI::TasksCmd::show_callback() {
+void Lines::CLI::TasksCmd::showcmd_callback() {
     auto id = backend_id(*_options.tasks_filter_rule.id);
     try {
         auto task = _storage.at(id);

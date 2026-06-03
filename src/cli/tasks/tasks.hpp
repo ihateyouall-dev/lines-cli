@@ -37,8 +37,6 @@ class TasksCmd { // NOLINT
 
     bool _dirty = false;
 
-    auto require_task(std::size_t index) -> Lines::Task *;
-
     struct TaskOptionsFormats {
         std::string timepoint_format;
         // Message like "Enter "none" to disable something" in editing
@@ -51,20 +49,20 @@ class TasksCmd { // NOLINT
     void add_filter_options(::CLI::App &app, std::string_view desc_prefix);
     void add_force_flag(::CLI::App &app, std::string_view desc_postfix);
 
-    void list_init(::CLI::App &app);
-    void show_init(::CLI::App &app);
-    void set_init(::CLI::App &app);
-    void addition_init(::CLI::App &app);
-    void remove_init(::CLI::App &app);
-    void completion_init(::CLI::App &app);
+    void listcmd_init(::CLI::App &app);
+    void showcmd_init(::CLI::App &app);
+    void setcmd_init(::CLI::App &app);
+    void addcmd_init(::CLI::App &app);
+    void removecmd_init(::CLI::App &app);
+    void completecmd_init(::CLI::App &app);
 
-    void list_callback();
-    void show_callback();
-    void set_callback();
-    void remove_callback();
-    void addition_callback();
+    void listcmd_callback();
+    void showcmd_callback();
+    void setcmd_callback();
+    void removecmd_callback();
+    void addcmd_callback();
     template <typename Fn, typename Pred>
-    void completion_callback(
+    void completecmd_callback(
         const Fn &fn /* action to do with tasks */,
         const Pred &restriction /* boolean predicate, if returns true - callback stops */,
         std::string_view action_desc) {
