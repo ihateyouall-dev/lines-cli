@@ -75,18 +75,17 @@ void Lines::CLI::TasksCmd::addition_init(::CLI::App &app) {
     add->callback([this]() -> void { addition_callback(); });
 }
 
-void Lines::CLI::TasksCmd::editing_init(::CLI::App &app) {
-    auto *edit = app.add_subcommand("edit", "Edit task");
-    edit->add_option("-i,--id", _options.tasks_filter_rule.id, "Edit task with given ID")
-        ->required();
-    edit->add_option("--title", _options.title, "Give task a new title");
+void Lines::CLI::TasksCmd::set_init(::CLI::App &app) {
+    auto *set = app.add_subcommand("set", "Edit tasks");
+    set->add_option("--title", _options.title, "Give task a new title");
+    set->add_option("ID", _options.tasks_filter_rule.id, "ID of task to edit");
 
-    add_task_options(*edit, "Give task a new",
+    add_task_options(*set, "Give task a new",
                      TaskOptionsFormats{.timepoint_format = timepoint_format,
                                         .disabling_annot = ". Enter \'none\' to disable it"});
-    add_force_flag(*edit, "editing");
+    add_force_flag(*set, "editing");
 
-    edit->callback([this]() -> void { editing_callback(); });
+    set->callback([this]() -> void { set_callback(); });
 }
 
 void Lines::CLI::TasksCmd::remove_init(::CLI::App &app) {
@@ -98,7 +97,7 @@ void Lines::CLI::TasksCmd::remove_init(::CLI::App &app) {
 
     add_force_flag(*remove, "removing");
 
-    remove->callback([this]() -> void { remove_init(); });
+    remove->callback([this]() -> void { remove_callback(); });
 }
 
 void Lines::CLI::TasksCmd::completion_init(::CLI::App &app) {
@@ -132,7 +131,7 @@ void Lines::CLI::TasksCmd::init(::CLI::App &app) {
     list_init(*tasks);
     show_init(*tasks);
     remove_init(*tasks);
-    editing_init(*tasks);
+    set_init(*tasks);
 }
 
 void Lines::CLI::TasksCmd::save() {
@@ -239,7 +238,7 @@ void Lines::CLI::TasksCmd::addition_callback() {
     _dirty = true;
 }
 
-void Lines::CLI::TasksCmd::editing_callback() {
+void Lines::CLI::TasksCmd::set_callback() {
     auto *task = require_task(*_options.tasks_filter_rule.id - 1);
     if (task == nullptr) {
         return;
@@ -290,6 +289,34 @@ void Lines::CLI::TasksCmd::editing_callback() {
     _dirty = true;
 }
 
+void Lines::CLI::TasksCmd::remove_callback() {
+    if (_options.tasks_filter_rule.id) {
+        make_backend_id(*_options.tasks_filter_rule.id);
+    }
+    auto tasks = filter(_storage, _options.tasks_filter_rule);
+    if (tasks.empty()) {
+        std::cerr << "ERROR: Task not found\n";
+        return;
+    }
+    for (const auto &task : tasks) {
+        std::cout << std::format("{}. {}\n", frontend_id(task.id),
+                                 task_str(*task.task, _cfg.cli_use_unicode, _cfg.cli_colorize));
+    }
+
+    if (!_options.force && !_cfg.always_force) {
+        std::cout << std::format("\n{} tasks will be removed\n", tasks.size());
+        if (!confirm()) {
+            return;
+        }
+    }
+
+    for (const auto &task : std::ranges::reverse_view(tasks)) {
+        _storage.erase(static_cast<std::ptrdiff_t>(task.id));
+    }
+    std::cout << std::format("\n{} tasks was removed\n", tasks.size());
+    _dirty = true;
+}
+
 void Lines::CLI::TasksCmd::list_callback() {
     if (_options.tasks_filter_rule.id) {
         make_backend_id(*_options.tasks_filter_rule.id);
@@ -315,39 +342,6 @@ void Lines::CLI::TasksCmd::show_callback() {
         std::cout << "Task not found\n";
         return;
     }
-}
-
-void Lines::CLI::TasksCmd::remove_init() {
-    if (_options.tasks_filter_rule.id) {
-        make_backend_id(*_options.tasks_filter_rule.id);
-    }
-    auto tasks = filter(_storage, _options.tasks_filter_rule);
-    if (tasks.empty()) {
-        std::cerr << "ERROR: Task not found\n";
-        return;
-    }
-    if (tasks.size() == 1) {
-        std::cout << std::format(
-            "Task to remove:\nID: {}\n{}\n", frontend_id(tasks[0].id),
-            full_task_str(*tasks[0].task, _cfg.cli_use_unicode, _cfg.cli_colorize));
-    } else {
-        std::cout << "Tasks to remove:\n";
-        for (const auto &task : tasks) {
-            std::cout << std::format("{}. {}\n", frontend_id(task.id),
-                                     task_str(*task.task, _cfg.cli_use_unicode, _cfg.cli_colorize));
-        }
-    }
-
-    if (!_options.force && !_cfg.always_force) {
-        if (!confirm()) {
-            return;
-        }
-    }
-
-    for (const auto &task : std::ranges::reverse_view(tasks)) {
-        _storage.erase(static_cast<std::ptrdiff_t>(task.id));
-    }
-    _dirty = true;
 }
 
 void Lines::CLI::TasksCmd::add_task_options(::CLI::App &app, std::string_view desc_prefix, // NOLINT

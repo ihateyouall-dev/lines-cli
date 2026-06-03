@@ -53,16 +53,16 @@ class TasksCmd { // NOLINT
 
     void list_init(::CLI::App &app);
     void show_init(::CLI::App &app);
-    void editing_init(::CLI::App &app);
+    void set_init(::CLI::App &app);
     void addition_init(::CLI::App &app);
     void remove_init(::CLI::App &app);
     void completion_init(::CLI::App &app);
 
     void list_callback();
     void show_callback();
-    void editing_callback();
+    void set_callback();
+    void remove_callback();
     void addition_callback();
-    void remove_init();
     template <typename Fn, typename Pred>
     void completion_callback(
         const Fn &fn /* action to do with tasks */,
