@@ -51,16 +51,18 @@ class TasksCmd { // NOLINT
     void add_filter_options(::CLI::App &app, std::string_view desc_prefix);
     void add_force_flag(::CLI::App &app, std::string_view desc_postfix);
 
-    void showing_init(::CLI::App &app);
+    void list_init(::CLI::App &app);
+    void show_init(::CLI::App &app);
     void editing_init(::CLI::App &app);
     void addition_init(::CLI::App &app);
-    void removing_init(::CLI::App &app);
+    void remove_init(::CLI::App &app);
     void completion_init(::CLI::App &app);
 
-    void showing_callback();
+    void list_callback();
+    void show_callback();
     void editing_callback();
     void addition_callback();
-    void removing_callback();
+    void remove_init();
     template <typename Fn, typename Pred>
     void completion_callback(
         const Fn &fn /* action to do with tasks */,

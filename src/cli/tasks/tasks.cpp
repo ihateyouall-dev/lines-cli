@@ -32,6 +32,11 @@ void validate_regex(std::string_view regex) {
         throw std::invalid_argument(std::format("REGEX ERROR: {}", r.error()));
     }
 }
+
+auto backend_id(std::size_t id) -> std::size_t { return --id; }
+auto frontend_id(std::size_t id) -> std::size_t { return ++id; }
+void make_backend_id(std::size_t &id) { --id; }
+void make_frontend_id(std::size_t &id) { ++id; }
 } // namespace
 
 Lines::CLI::TasksCmd::TasksCmd() { _storage.load_from_file(); }; // NOLINT
@@ -46,12 +51,20 @@ auto Lines::CLI::TasksCmd::require_task(std::size_t index) -> Lines::Task * {
     return result;
 }
 
-void Lines::CLI::TasksCmd::showing_init(::CLI::App &app) {
-    auto *show = app.add_subcommand("show", "Show information about tasks");
+void Lines::CLI::TasksCmd::list_init(::CLI::App &app) {
+    auto *list = app.add_subcommand("list", "List tasks")->alias("ls");
 
-    add_filter_options(*show, "Show");
+    add_filter_options(*list, "List");
 
-    show->callback([this]() -> void { showing_callback(); });
+    list->callback([this]() -> void { list_callback(); });
+}
+
+void Lines::CLI::TasksCmd::show_init(::CLI::App &app) {
+    auto *show = app.add_subcommand("show", "Show info about the task")->alias("s");
+
+    show->add_option("ID", _options.tasks_filter_rule.id, "ID of the task to show")->required();
+
+    show->callback([this]() -> void { show_callback(); });
 }
 
 void Lines::CLI::TasksCmd::addition_init(::CLI::App &app) {
@@ -76,7 +89,7 @@ void Lines::CLI::TasksCmd::editing_init(::CLI::App &app) {
     edit->callback([this]() -> void { editing_callback(); });
 }
 
-void Lines::CLI::TasksCmd::removing_init(::CLI::App &app) {
+void Lines::CLI::TasksCmd::remove_init(::CLI::App &app) {
     auto *remove = app.add_subcommand("remove", "Remove tasks")->alias("rm");
 
     add_filter_options(*remove, "Remove");
@@ -85,7 +98,7 @@ void Lines::CLI::TasksCmd::removing_init(::CLI::App &app) {
 
     add_force_flag(*remove, "removing");
 
-    remove->callback([this]() -> void { removing_callback(); });
+    remove->callback([this]() -> void { remove_init(); });
 }
 
 void Lines::CLI::TasksCmd::completion_init(::CLI::App &app) {
@@ -116,8 +129,9 @@ void Lines::CLI::TasksCmd::init(::CLI::App &app) {
     auto *tasks = app.add_subcommand("tasks", "Work with tasks");
     addition_init(*tasks);
     completion_init(*tasks);
-    showing_init(*tasks);
-    removing_init(*tasks);
+    list_init(*tasks);
+    show_init(*tasks);
+    remove_init(*tasks);
     editing_init(*tasks);
 }
 
@@ -219,7 +233,7 @@ void Lines::CLI::TasksCmd::addition_callback() {
     });
 
     std::size_t id = _storage.size();
-    std::cout << std::format("Added task:\nID: {}\n{}\n", id + 1,
+    std::cout << std::format("Added task:\nID: {}\n{}\n", frontend_id(id),
                              full_task_str(task, _cfg.cli_use_unicode, _cfg.cli_colorize));
     _storage.add(task);
     _dirty = true;
@@ -276,30 +290,36 @@ void Lines::CLI::TasksCmd::editing_callback() {
     _dirty = true;
 }
 
-void Lines::CLI::TasksCmd::showing_callback() {
+void Lines::CLI::TasksCmd::list_callback() {
     if (_options.tasks_filter_rule.id) {
-        --*_options.tasks_filter_rule.id;
+        make_backend_id(*_options.tasks_filter_rule.id);
     }
     auto tasks = filter(_storage, _options.tasks_filter_rule);
     if (tasks.empty()) {
         std::cerr << "Seems like there's no tasks\n";
         return;
     }
-    if (tasks.size() == 1) {
-        std::cout << std::format(
-            "ID: {}\n{}\n", tasks[0].id + 1,
-            full_task_str(*tasks[0].task, _cfg.cli_use_unicode, _cfg.cli_colorize));
-        return;
-    }
     for (const auto &task : tasks) {
-        std::cout << std::format("{}. {}\n", task.id + 1,
+        std::cout << std::format("{}. {}\n", frontend_id(task.id),
                                  task_str(*task.task, _cfg.cli_use_unicode, _cfg.cli_colorize));
     }
 }
 
-void Lines::CLI::TasksCmd::removing_callback() {
+void Lines::CLI::TasksCmd::show_callback() {
+    auto id = backend_id(*_options.tasks_filter_rule.id);
+    try {
+        auto task = _storage.at(id);
+        std::cout << std::format("ID: {}\n{}\n", frontend_id(id),
+                                 full_task_str(task, _cfg.cli_use_unicode, _cfg.cli_colorize));
+    } catch (const std::exception &e) {
+        std::cout << "Task not found\n";
+        return;
+    }
+}
+
+void Lines::CLI::TasksCmd::remove_init() {
     if (_options.tasks_filter_rule.id) {
-        --*_options.tasks_filter_rule.id;
+        make_backend_id(*_options.tasks_filter_rule.id);
     }
     auto tasks = filter(_storage, _options.tasks_filter_rule);
     if (tasks.empty()) {
@@ -308,12 +328,12 @@ void Lines::CLI::TasksCmd::removing_callback() {
     }
     if (tasks.size() == 1) {
         std::cout << std::format(
-            "Task to remove:\nID: {}\n{}\n", tasks[0].id + 1,
+            "Task to remove:\nID: {}\n{}\n", frontend_id(tasks[0].id),
             full_task_str(*tasks[0].task, _cfg.cli_use_unicode, _cfg.cli_colorize));
     } else {
         std::cout << "Tasks to remove:\n";
         for (const auto &task : tasks) {
-            std::cout << std::format("{}. {}\n", task.id + 1,
+            std::cout << std::format("{}. {}\n", frontend_id(task.id),
                                      task_str(*task.task, _cfg.cli_use_unicode, _cfg.cli_colorize));
         }
     }
