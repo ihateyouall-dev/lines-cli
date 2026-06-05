@@ -29,7 +29,8 @@ class TasksCmd { // NOLINT
 
         TasksFilter::TasksFilterRule tasks_filter_rule;
     } _options;
-    TasksJSONStorage _storage{ClientUtils::get_fs_home() / ".lines.d" / "saves" / "tasks.json"};
+    TasksJSONStorage _storage{ClientUtils::get_fs_home() / ".lines.d" /
+                              "saves" / "tasks.json"};
 
     ClientUtils::Config _cfg;
     std::string timepoint_format = "YYYY/MM/DD[_HH:MM[:SS]]";
@@ -42,10 +43,11 @@ class TasksCmd { // NOLINT
         // Message like "Enter "none" to disable something" in editing
         std::string disabling_annot;
     };
-    void add_task_options(::CLI::App &app, std::string_view desc_prefix, // NOLINT
-                          const TaskOptionsFormats &formats = TaskOptionsFormats{
-                              .timepoint_format = "YYYY/MM/DD[_HH:MM[:SS]]",
-                              .disabling_annot = ""});
+    void
+    add_task_options(::CLI::App &app, std::string_view desc_prefix, // NOLINT
+                     const TaskOptionsFormats &formats = TaskOptionsFormats{
+                         .timepoint_format = "YYYY/MM/DD[_HH:MM[:SS]]",
+                         .disabling_annot = ""});
     void add_filter_options(::CLI::App &app, std::string_view desc_prefix);
     void add_force_flag(::CLI::App &app, std::string_view desc_postfix);
 
@@ -54,7 +56,7 @@ class TasksCmd { // NOLINT
     void setcmd_init(::CLI::App &app);
     void addcmd_init(::CLI::App &app);
     void removecmd_init(::CLI::App &app);
-    void completecmd_init(::CLI::App &app);
+    void completioncmd_init(::CLI::App &app);
 
     void listcmd_callback();
     void showcmd_callback();
@@ -62,9 +64,11 @@ class TasksCmd { // NOLINT
     void removecmd_callback();
     void addcmd_callback();
     template <typename Fn, typename Pred>
-    void completecmd_callback(
+    void completioncmd_callback(
         const Fn &fn /* action to do with tasks */,
-        const Pred &restriction /* boolean predicate, if returns true - callback stops */,
+        const Pred &restriction /* boolean predicate, if returns true - callback
+                                   stops */
+        ,
         std::string_view action_desc) {
         if (_options.tasks_filter_rule.id) {
             --*_options.tasks_filter_rule.id;
@@ -78,13 +82,15 @@ class TasksCmd { // NOLINT
             auto task = tasks[0];
             auto tmp = *task.task;
             if (restriction(tmp)) {
-                std::cerr << std::format("ERROR: Task already {}d\n", action_desc);
+                std::cerr << std::format("ERROR: Task already {}d\n",
+                                         action_desc);
                 return;
             }
             fn(tmp);
             std::cout << std::format(
                 "Task to {}:\nID: {}\n{}\n", action_desc, task.id + 1,
-                ClientUtils::full_task_str(tmp, _cfg.cli_use_unicode, _cfg.cli_colorize));
+                ClientUtils::full_task_str(tmp, _cfg.cli_use_unicode,
+                                           _cfg.cli_colorize));
             if (_options.force || ClientUtils::confirm()) {
                 fn(*task.task);
             }
@@ -93,7 +99,8 @@ class TasksCmd { // NOLINT
             for (const auto &task : tasks) {
                 std::cout << std::format(
                     "{}. {}\n", task.id + 1,
-                    ClientUtils::task_str(*task.task, _cfg.cli_use_unicode, _cfg.cli_colorize));
+                    ClientUtils::task_str(*task.task, _cfg.cli_use_unicode,
+                                          _cfg.cli_colorize));
             }
             if (_options.force || ClientUtils::confirm()) {
                 for (const auto &task : tasks) {

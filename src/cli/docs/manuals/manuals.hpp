@@ -7,7 +7,7 @@ static const std::string repeat_manual = R"(Task repeat rules.
 
 The difference between regular task and task with a repeat rule is that
 repeatable tasks do not have a "completed" or "uncompleted" state.
-Every time you complete a repeatable task, it only moves task's deadline
+Every time you finish a repeatable task, it only moves task's deadline
 to the next occurrence, which is calculated using the repeat rule.
 
 There are two types of repeat rules:
