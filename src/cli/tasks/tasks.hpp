@@ -1,11 +1,10 @@
 #include "client-utils/config.hpp"
 #include "client-utils/filesystem.hpp"
-#include "client-utils/utils.hpp"
 #include "filter.hpp"
 #include "lines/tasks/task.hpp"
 #include "storages/tasks/json.hpp"
 
-#include <iostream>
+#include <functional>
 #include <string>
 
 namespace CLI {
@@ -63,53 +62,13 @@ class TasksCmd { // NOLINT
     void setcmd_callback();
     void removecmd_callback();
     void addcmd_callback();
-    template <typename Fn, typename Pred>
     void completioncmd_callback(
-        const Fn &fn /* action to do with tasks */,
-        const Pred &restriction /* boolean predicate, if returns true - callback
-                                   stops */
+        const std::function<void(Lines::Task &)>
+            &fn /* action to do with tasks */,
+        const std::function<bool(const Lines::Task &)> &restriction /* boolean
+           predicate, if returns true - callback stops */
         ,
-        std::string_view action_desc) {
-        if (_options.tasks_filter_rule.id) {
-            --*_options.tasks_filter_rule.id;
-        }
-        auto tasks = filter(_storage, _options.tasks_filter_rule);
-        if (tasks.empty()) {
-            std::cerr << "ERROR: Task not found\n";
-            return;
-        }
-        if (tasks.size() == 1) {
-            auto task = tasks[0];
-            auto tmp = *task.task;
-            if (restriction(tmp)) {
-                std::cerr << std::format("ERROR: Task already {}d\n",
-                                         action_desc);
-                return;
-            }
-            fn(tmp);
-            std::cout << std::format(
-                "Task to {}:\nID: {}\n{}\n", action_desc, task.id + 1,
-                ClientUtils::full_task_str(tmp, _cfg.cli_use_unicode,
-                                           _cfg.cli_colorize));
-            if (_options.force || ClientUtils::confirm()) {
-                fn(*task.task);
-            }
-        } else {
-            std::cout << std::format("Tasks to {}\n", action_desc);
-            for (const auto &task : tasks) {
-                std::cout << std::format(
-                    "{}. {}\n", task.id + 1,
-                    ClientUtils::task_str(*task.task, _cfg.cli_use_unicode,
-                                          _cfg.cli_colorize));
-            }
-            if (_options.force || ClientUtils::confirm()) {
-                for (const auto &task : tasks) {
-                    fn(*task.task);
-                }
-            }
-        }
-        _dirty = true;
-    }
+        std::string_view action_desc);
 
   public:
     TasksCmd();

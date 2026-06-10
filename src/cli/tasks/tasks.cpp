@@ -24,7 +24,7 @@ void with_validation(const Fn &fn) {
     try {
         fn();
     } catch (const Exc &e) {
-        throw CLI::ValidationError(e.what());
+        throw CLI::ValidationError(error_str("ERROR:", e.what()));
     }
 }
 
@@ -32,7 +32,7 @@ void with_validation(const Fn &fn) {
 void validate_regex(std::string_view regex) {
     re2::RE2 r{regex, re2::RE2::Quiet};
     if (!r.ok()) {
-        throw std::invalid_argument(std::format("REGEX ERROR: {}", r.error()));
+        throw std::invalid_argument(r.error());
     }
 }
 
@@ -222,7 +222,8 @@ void Lines::CLI::TasksCmd::add_force_flag(::CLI::App &app,
 
 void Lines::CLI::TasksCmd::addcmd_callback() {
     if (!_options.title) {
-        throw ::CLI::ValidationError("ERROR: Task title cannot be empty");
+        throw ::CLI::ValidationError(
+            error_str("ERROR:", "Task title cannot be empty"));
     }
 
     Lines::Task task{
@@ -235,17 +236,12 @@ void Lines::CLI::TasksCmd::addcmd_callback() {
         }
 
         if (_options.repeat_rule) {
-            with_validation([&]() -> void {
-                task.set_repeat_rule(
-                    Parsers::parse_repeat_rule(*_options.repeat_rule));
-            });
+            task.set_repeat_rule(
+                Parsers::parse_repeat_rule(*_options.repeat_rule));
         }
 
         if (_options.repeat_end) {
-            with_validation([&]() -> void {
-                task.set_repeat_end(
-                    Parsers::parse_timepoint(*_options.repeat_end));
-            });
+            task.set_repeat_end(Parsers::parse_timepoint(*_options.repeat_end));
         }
     });
 
@@ -263,7 +259,7 @@ void Lines::CLI::TasksCmd::setcmd_callback() {
     try {
         task = &_storage.at(backend_id(*_options.tasks_filter_rule.id));
     } catch (const std::exception &e) {
-        std::cerr << "ERROR: Task not found\n";
+        std::cerr << error_str("ERROR:", "Task not found\n");
         return;
     }
 
@@ -324,7 +320,7 @@ void Lines::CLI::TasksCmd::removecmd_callback() {
     }
     auto tasks = filter(_storage, _options.tasks_filter_rule);
     if (tasks.empty()) {
-        std::cerr << "ERROR: Task not found\n";
+        std::cerr << error_str("ERROR:", "Task not found\n");
         return;
     }
     for (const auto &task : tasks) {
@@ -371,7 +367,7 @@ void Lines::CLI::TasksCmd::showcmd_callback() {
             "ID: {}\n{}\n", frontend_id(id),
             full_task_str(task, _cfg.cli_use_unicode, _cfg.cli_colorize));
     } catch (const std::exception &e) {
-        std::cerr << "ERROR: Task not found\n";
+        std::cerr << error_str("ERROR:", "Task not found\n");
         return;
     }
 }
@@ -397,6 +393,57 @@ void Lines::CLI::TasksCmd::add_task_options(
                    std::format("{} end of repeat{}", desc_prefix,
                                formats.disabling_annot))
         ->type_name("TIMEPOINT");
+}
+
+void Lines::CLI::TasksCmd::completioncmd_callback(
+    const std::function<void(Lines::Task &)> &fn /* action to do with tasks */,
+    const std::function<bool(const Lines::Task &)> &restriction /* boolean
+       predicate, if returns true - callback stops */
+    ,
+    std::string_view action_desc) {
+    if (_options.tasks_filter_rule.id) {
+        --*_options.tasks_filter_rule.id;
+    }
+    auto tasks = filter(_storage, _options.tasks_filter_rule);
+    if (tasks.empty()) {
+        std::cerr << error_str("ERROR:", "Task not found\n");
+        return;
+    }
+    if (tasks.size() == 1) {
+        auto task = tasks[0];
+        auto tmp = *task.task;
+        if (restriction(tmp)) {
+            std::cerr << error_str(
+                "ERROR:",
+                // Put action into past simple, if action is reopening we cannot
+                // say 'Task already reopened', so substituding it with 'open'
+                std::format("Task already {}ed\n",
+                            (action_desc == "reopen" ? "open" : action_desc)));
+            return;
+        }
+        fn(tmp);
+        std::cout << std::format(
+            "Task to {}:\nID: {}\n{}\n", action_desc, frontend_id(task.id),
+            ClientUtils::full_task_str(tmp, _cfg.cli_use_unicode,
+                                       _cfg.cli_colorize));
+        if (_options.force || ClientUtils::confirm()) {
+            fn(*task.task);
+        }
+    } else {
+        std::cout << std::format("Tasks to {}\n", action_desc);
+        for (const auto &task : tasks) {
+            std::cout << std::format("{}. {}\n", frontend_id(task.id),
+                                     ClientUtils::task_str(*task.task,
+                                                           _cfg.cli_use_unicode,
+                                                           _cfg.cli_colorize));
+        }
+        if (_options.force || ClientUtils::confirm()) {
+            for (const auto &task : tasks) {
+                fn(*task.task);
+            }
+        }
+    }
+    _dirty = true;
 }
 
 void Lines::CLI::TasksCmd::set_config(const ClientUtils::Config &cfg) {

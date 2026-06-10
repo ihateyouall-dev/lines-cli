@@ -19,18 +19,19 @@
 #include <string>
 #include <string_view>
 #include <unordered_map>
-#include <unordered_set>
 #include <vector>
 
-void Lines::ClientUtils::Parsers::throw_range_error(std::string_view prefix,
-                                                    std::string_view range_str) {
-    throw std::out_of_range(std::format("ERROR: {} must be in range {}", prefix, range_str));
+void Lines::ClientUtils::Parsers::throw_range_error(
+    std::string_view prefix, std::string_view range_str) {
+    throw std::out_of_range(
+        std::format("{} must be in range {}", prefix, range_str));
 }
 
 namespace {
 auto to_lower_str(std::string str) -> std::string {
-    std::ranges::transform(str, str.begin(),
-                           [](unsigned char c) -> int { return std::tolower(c); });
+    std::ranges::transform(str, str.begin(), [](unsigned char c) -> int {
+        return std::tolower(c);
+    });
     return str;
 }
 
@@ -44,7 +45,8 @@ struct TemporalOperator {
     char unit;
 };
 
-void eval_date_operators(Lines::Temporal::Date &date, const std::vector<TemporalOperator> &ops) {
+void eval_date_operators(Lines::Temporal::Date &date,
+                         const std::vector<TemporalOperator> &ops) {
     for (const auto &op : ops) {
         switch (op.unit) {
         case 'y':
@@ -60,15 +62,16 @@ void eval_date_operators(Lines::Temporal::Date &date, const std::vector<Temporal
             date += Lines::Temporal::Days{op.value};
             break;
         default:
-            throw std::invalid_argument(
-                std::format("ERROR: Unknown unit: {}. Only units are usable with date operators "
-                            "are y(years), m(months), w(weeks) and d(days)",
-                            op.unit));
+            throw std::invalid_argument(std::format(
+                "Unknown unit: {}. Only units are usable with date operators "
+                "are y(years), m(months), w(weeks) and d(days)",
+                op.unit));
         }
     }
 }
 
-void eval_time_operators(Lines::Temporal::Timestamp &ts, const std::vector<TemporalOperator> &ops) {
+void eval_time_operators(Lines::Temporal::Timestamp &ts,
+                         const std::vector<TemporalOperator> &ops) {
     for (const auto &op : ops) {
         switch (op.unit) {
         case 'h':
@@ -81,16 +84,18 @@ void eval_time_operators(Lines::Temporal::Timestamp &ts, const std::vector<Tempo
             ts += Lines::Temporal::Seconds{op.value};
             break;
         default:
-            throw std::invalid_argument(
-                std::format("ERROR: Unknown unit: {}. Only units are usable with time operators "
-                            "are h(hours), m(minutes) and s(seconds)",
-                            op.unit));
+            throw std::invalid_argument(std::format(
+                "Unknown unit: {}. Only units are usable with time operators "
+                "are h(hours), m(minutes) and s(seconds)",
+                op.unit));
         }
     }
 }
 
-// Parse operators after temporal expression base (e.g +1d+1m-1y... or +1h-1m+1s...)
-auto parse_temporal_operators(std::string_view str) -> std::vector<TemporalOperator> {
+// Parse operators after temporal expression base (e.g +1d+1m-1y... or
+// +1h-1m+1s...)
+auto parse_temporal_operators(std::string_view str)
+    -> std::vector<TemporalOperator> {
     std::vector<TemporalOperator> res;
 
     std::size_t i{};
@@ -101,7 +106,7 @@ auto parse_temporal_operators(std::string_view str) -> std::vector<TemporalOpera
 
         if (str[i] != '+' && str[i] != '-') {
             throw std::invalid_argument(
-                std::format("ERROR: Unknown operator: {}. Only operations "
+                std::format("Unknown operator: {}. Only operations "
                             "permitted with temporal expressions are + and -",
                             str[i]));
         }
@@ -110,22 +115,23 @@ auto parse_temporal_operators(std::string_view str) -> std::vector<TemporalOpera
 
         bool has_digits{};
 
-        while (i < str.size() && (std::isdigit(static_cast<unsigned char>(str[i])) != 0)) {
+        while (i < str.size() &&
+               (std::isdigit(static_cast<unsigned char>(str[i])) != 0)) {
             has_digits = true;
             num = (num * 10) + static_cast<uint64_t>((str[i] - '0'));
             if (num > UINT16_MAX) {
-                Lines::ClientUtils::Parsers::throw_range_error("Value in operator",
-                                                               std::format("[0,{}]", UINT16_MAX));
+                Lines::ClientUtils::Parsers::throw_range_error(
+                    "Value in operator", std::format("[0,{}]", UINT16_MAX));
             }
             ++i;
         }
 
         if (!has_digits) {
-            throw std::invalid_argument("ERROR: No value given to temporal operator");
+            throw std::invalid_argument("No value given to temporal operator");
         }
 
         if (i >= str.size()) {
-            throw std::invalid_argument("ERROR: Missing unit in temporal expression");
+            throw std::invalid_argument("Missing unit in temporal expression");
         }
         unit = str[i];
 
@@ -136,9 +142,10 @@ auto parse_temporal_operators(std::string_view str) -> std::vector<TemporalOpera
     return res;
 }
 
-/* Splits temporal expressions like "1970/01/01+1d" or "12:34:56-56s" to base (before operators) and
-operators */
-auto split_temporal_expression(const std::string &str) -> TemporalExprSplitResult {
+/* Splits temporal expressions like "1970/01/01+1d" or "12:34:56-56s" to base
+(before operators) and operators */
+auto split_temporal_expression(const std::string &str)
+    -> TemporalExprSplitResult {
     TemporalExprSplitResult res;
 
     std::size_t first_operator = str.find_first_of("+-");
@@ -152,8 +159,8 @@ auto split_temporal_expression(const std::string &str) -> TemporalExprSplitResul
 }
 
 auto days_in_month(Lines::Temporal::Month month) -> std::size_t {
-    static constexpr std::array<std::size_t, 12> days = {31, 28, 31, 30, 31, 30,
-                                                         31, 31, 30, 31, 30, 31};
+    static constexpr std::array<std::size_t, 12> days = {
+        31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
     return days[unsigned(month) - 1]; // NOLINT
 }
 
@@ -167,8 +174,8 @@ auto parse_date_base(const std::string &str) -> Lines::Temporal::Date {
         {"tomorrow", []() -> Date { return LocalClock::today() + Days{1}; }},
         {"yesterday", []() -> Date { return LocalClock::today() - Days{1}; }}};
 
-    // If base has function in base_funcs, it returns function value, otherwise it parses base as
-    // date in format YYYY/MM/DD
+    // If base has function in base_funcs, it returns function value, otherwise
+    // it parses base as date in format YYYY/MM/DD
     if (auto it = base_funcs.find(base); it != base_funcs.end()) {
         return it->second();
     }
@@ -195,10 +202,12 @@ auto parse_date_base(const std::string &str) -> Lines::Temporal::Date {
     }
     if (unsigned(t_day) > max_days) {
         static const std::array<std::string, 12> month_str{
-            "January", "February", "March",     "April",   "May",      "June",
-            "July",    "August",   "September", "October", "November", "December"};
+            "January",   "February", "March",    "April",
+            "May",       "June",     "July",     "August",
+            "September", "October",  "November", "December"};
         Lines::ClientUtils::Parsers::throw_range_error(
-            std::format("Day in {} of {}", month_str[unsigned(t_month) - 1], int(t_year)), // NOLINT
+            std::format("Day in {} of {}", month_str[unsigned(t_month) - 1],
+                        int(t_year)), // NOLINT
             std::format("[1;{}]", max_days));
     }
 
@@ -236,7 +245,8 @@ auto parse_time_base(const std::string &str) -> Lines::Temporal::Timestamp {
             Lines::Temporal::Seconds{second}};
 }
 
-auto parse_repeat_interval(std::size_t val, std::string unit) -> Lines::Temporal::Seconds {
+auto parse_repeat_interval(std::size_t val, std::string unit)
+    -> Lines::Temporal::Seconds {
     using namespace Lines::Temporal;
 
     const auto v = static_cast<int64_t>(val);
@@ -265,7 +275,7 @@ auto parse_repeat_interval(std::size_t val, std::string unit) -> Lines::Temporal
         return duration_cast<Seconds>(Years{v});
     }
 
-    throw std::invalid_argument(R"(ERROR: Invalid repeat unit
+    throw std::invalid_argument(R"(Invalid repeat unit
 Expected units:
 s - seconds
 m - minutes
@@ -303,13 +313,14 @@ auto parse_weekday(std::string_view str) -> Lines::Temporal::Weekday {
     LINES_UNREACHABLE();
 }
 
-auto parse_repeat_weekday(std::string_view str) -> std::vector<Lines::Temporal::Weekday> {
+auto parse_repeat_weekday(std::string_view str)
+    -> std::vector<Lines::Temporal::Weekday> {
     auto point = str.find('.');
     if (point == std::string_view::npos) {
         return {parse_weekday(str)};
     }
     if (str.size() != 7 || str[3] != '.') {
-        throw std::invalid_argument(R"(ERROR: Invalid weekday format.
+        throw std::invalid_argument(R"(Invalid weekday format.
 Examples:
 mon
 wed.sat
@@ -325,7 +336,8 @@ See "lines-cli docs repeat" for more info)");
             return Lines::Temporal::Weekday::Monday;
         }
 
-        return static_cast<Lines::Temporal::Weekday>(static_cast<uint8_t>(wd) + 1);
+        return static_cast<Lines::Temporal::Weekday>(static_cast<uint8_t>(wd) +
+                                                     1);
     };
 
     for (auto wd = begin;; wd = next_weekday(wd)) {
@@ -340,7 +352,8 @@ See "lines-cli docs repeat" for more info)");
 // Parses repeat rule with weekdays, like "mon,wed.sat"
 // wd1,wd2 means "WD1 and WD2"
 // wd1.wd2 means "From WD1 to WD2"
-auto parse_repeat_weekdays(std::string str) -> std::vector<Lines::Temporal::Weekday> {
+auto parse_repeat_weekdays(std::string str)
+    -> std::vector<Lines::Temporal::Weekday> {
     str = to_lower_str(str);
     std::vector<Lines::Temporal::Weekday> res;
 
@@ -388,11 +401,12 @@ auto parse_time_nv(const std::string &str) -> Lines::Temporal::Timestamp {
 
 auto parse_date(const std::string &str) -> Lines::Temporal::Date {
     static const re2::RE2 date_regex(
-        R"(^(\d{4}/\d{2}/\d{2}|today|tomorrow|yesterday)([+-]\d+[ymwd])*$)", re2_icase());
+        R"(^(\d{4}/\d{2}/\d{2}|today|tomorrow|yesterday)([+-]\d+[ymwd])*$)",
+        re2_icase());
 
     if (!re2::RE2::FullMatch(str, date_regex)) {
         throw std::invalid_argument(
-            R"(ERROR: Unknown date format.
+            R"(Unknown date format.
 Supported date formats:
 
 Absolute:
@@ -412,11 +426,12 @@ Operators:
 }
 
 auto parse_time(const std::string &str) -> Lines::Temporal::Timestamp {
-    static const re2::RE2 time_regex(R"(^(\d{2}:\d{2}(:\d{2})?|now)([+-]\d+[hms])*$)", re2_icase());
+    static const re2::RE2 time_regex(
+        R"(^(\d{2}:\d{2}(:\d{2})?|now)([+-]\d+[hms])*$)", re2_icase());
 
     if (!re2::RE2::FullMatch(str, time_regex)) {
         throw std::invalid_argument(
-            R"(ERROR: Unknown time format.
+            R"(Unknown time format.
 Supported time formats:
 
 Absolute:
@@ -442,14 +457,16 @@ auto parse_timepoint_nv(const std::string &str) -> Lines::Temporal::TimePoint {
     std::string date = str.substr(0, middle_divider);
 
     if (middle_divider == std::string::npos) {
-        return Lines::Temporal::DateTime{parse_date_nv(date),
-                                         Lines::Temporal::Timestamp{Lines::Temporal::Seconds{-1}}}
+        return Lines::Temporal::DateTime{
+            parse_date_nv(date),
+            Lines::Temporal::Timestamp{Lines::Temporal::Seconds{-1}}}
             .time_point();
     }
 
     std::string time = str.substr(middle_divider + 1);
 
-    return Lines::Temporal::DateTime{parse_date_nv(date), parse_time_nv(time)}.time_point();
+    return Lines::Temporal::DateTime{parse_date_nv(date), parse_time_nv(time)}
+        .time_point();
 }
 
 auto parse_timepoint(const std::string &str) -> Lines::Temporal::TimePoint {
@@ -458,53 +475,59 @@ auto parse_timepoint(const std::string &str) -> Lines::Temporal::TimePoint {
     std::string date = str.substr(0, middle_divider);
 
     if (middle_divider == std::string::npos) {
-        return Lines::Temporal::DateTime{parse_date(date),
-                                         Lines::Temporal::Timestamp{Lines::Temporal::Seconds{-1}}}
+        return Lines::Temporal::DateTime{
+            parse_date(date),
+            Lines::Temporal::Timestamp{Lines::Temporal::Seconds{-1}}}
             .time_point();
     }
 
     std::string time = str.substr(middle_divider + 1);
 
-    return Lines::Temporal::DateTime{parse_date(date), parse_time(time)}.time_point();
+    return Lines::Temporal::DateTime{parse_date(date), parse_time(time)}
+        .time_point();
 }
 
 auto parse_repeat_rule(const std::string &str) -> Lines::TaskRepeatRule {
-    static const re2::RE2 every_unit_regex(R"(^(\d+)(y|mo|w|d|h|m|s)$)", re2_icase());
+    static const re2::RE2 every_unit_regex(R"(^(\d+)(y|mo|w|d|h|m|s)$)",
+                                           re2_icase());
     static const re2::RE2 every_weekday_regex(
-        R"(^((mon|tue|wed|thu|fri|sat|sun)[,.])*(mon|tue|wed|thu|fri|sat|sun)$)", re2_icase());
+        R"(^((mon|tue|wed|thu|fri|sat|sun)[,.])*(mon|tue|wed|thu|fri|sat|sun)$)",
+        re2_icase());
 
     std::size_t val{};
     std::string unit;
     if (re2::RE2::FullMatch(str, every_unit_regex, &val, &unit)) {
         Lines::TaskRepeatRule res;
-        res.repeat_type = Lines::TaskRepeat::EveryUnit{.interval = parse_repeat_interval(val, unit),
-                                                       .unit_str = unit};
+        res.repeat_type = Lines::TaskRepeat::EveryUnit{
+            .interval = parse_repeat_interval(val, unit), .unit_str = unit};
         return res;
     }
     if (!re2::RE2::FullMatch(str, every_weekday_regex)) {
-        throw std::invalid_argument(R"(ERROR: Invalid repeat rule format. Formats:
-<N>unit     (e.g. "3d" repeats every 3 days)
-wd1,wd2.wd3 (e.g. "mon,wed.sun" repeats on monday and from wednesday to sunday
+        throw std::invalid_argument(R"(Invalid repeat rule format.
+Formats:
+<N>unit     (e.g. "3d", repeats every 3 days)
+wd1,wd2.wd3 (e.g. "mon,wed.sun", repeats on monday and from wednesday to sunday)
 
 See "lines-cli docs repeat" for more info)");
     }
 
     Lines::TaskRepeatRule res;
-    res.repeat_type = Lines::TaskRepeat::EveryWeekday{.weekdays = parse_repeat_weekdays(str)};
+    res.repeat_type =
+        Lines::TaskRepeat::EveryWeekday{.weekdays = parse_repeat_weekdays(str)};
     return res;
 }
 
 template <> auto parse<bool>(const std::string &str) -> bool {
     std::string lstr = to_lower_str(str);
 
-    if (lstr == "true" || lstr == "t" || lstr == "on" || lstr == "yes" || lstr == "y" ||
-        lstr == "1") {
+    if (lstr == "true" || lstr == "t" || lstr == "on" || lstr == "yes" ||
+        lstr == "y" || lstr == "1") {
         return true;
     }
-    if (lstr == "false" || lstr == "f" || lstr == "off" || lstr == "no" || lstr == "n" ||
-        lstr == "0") {
+    if (lstr == "false" || lstr == "f" || lstr == "off" || lstr == "no" ||
+        lstr == "n" || lstr == "0") {
         return false;
     }
-    throw std::invalid_argument("ERROR: Invalid boolean value");
+    throw std::invalid_argument("Invalid boolean value");
 }
 } // namespace Lines::ClientUtils::Parsers

@@ -23,8 +23,8 @@ auto confirm() -> bool {
 }
 
 auto date_str(const Lines::Temporal::Date &date) -> std::string {
-    return std::format("{:04}/{:02}/{:02}", int(date.year()), unsigned(date.month()),
-                       unsigned(date.day()));
+    return std::format("{:04}/{:02}/{:02}", int(date.year()),
+                       unsigned(date.month()), unsigned(date.day()));
 }
 
 auto timepoint_str(const Lines::Temporal::TimePoint &tp) -> std::string {
@@ -45,10 +45,12 @@ auto tags_str(const Lines::Task &task) -> std::string {
     return result;
 }
 
-auto completion_sign(const Lines::Task &task, bool use_unicode, bool colorize) -> std::string {
+auto completion_sign(const Lines::Task &task, bool use_unicode, bool colorize)
+    -> std::string {
     std::string sign{};
     assert(!task.completed() ||
-           !task.repeat_rule() && "Tasks with repeat rule cannot have completion state");
+           !task.repeat_rule() &&
+               "Tasks with repeat rule cannot have completion state");
     auto process_sign = [&](std::string &sign, std::string_view full,
                             std::string_view fallback, // NOLINT
                             const std::string &color) -> void {
@@ -79,11 +81,13 @@ static auto get_due_str_func(bool colorize) // NOLINT
     return res;
 }
 
-auto full_task_str(const Lines::Task &task, bool use_unicode, bool colorize) -> std::string {
+auto full_task_str(const Lines::Task &task, bool use_unicode, bool colorize)
+    -> std::string {
     std::string result = std::format("Title: {}\n", task.title());
     if (task.description()) {
         if (!task.description().value().empty()) {
-            result += std::format("Description: {}\n", task.description().value());
+            result +=
+                std::format("Description: {}\n", task.description().value());
         }
     }
     if (!task.tags().empty()) {
@@ -95,7 +99,8 @@ auto full_task_str(const Lines::Task &task, bool use_unicode, bool colorize) -> 
     }
     if (task.repeat_rule()) {
         if (task.next_due()) {
-            result += std::format("Next due: {}\n", due_str_func(*task.next_due()));
+            result +=
+                std::format("Next due: {}\n", due_str_func(*task.next_due()));
         }
         auto rr = *task.repeat_rule();
         if (rr.end) {
@@ -106,8 +111,10 @@ auto full_task_str(const Lines::Task &task, bool use_unicode, bool colorize) -> 
     return result;
 }
 
-auto task_str(const Lines::Task &task, bool use_unicode, bool colorize) -> std::string {
-    std::string res = std::format("{} ", completion_sign(task, use_unicode, colorize));
+auto task_str(const Lines::Task &task, bool use_unicode, bool colorize)
+    -> std::string {
+    std::string res =
+        std::format("{} ", completion_sign(task, use_unicode, colorize));
     res += task.title();
     if (task.due()) {
         auto due_str_func = get_due_str_func(colorize);
@@ -119,10 +126,14 @@ auto task_str(const Lines::Task &task, bool use_unicode, bool colorize) -> std::
     return res;
 }
 
-auto today() -> Lines::Temporal::Date { return Lines::Temporal::LocalClock::today(); }
+auto today() -> Lines::Temporal::Date {
+    return Lines::Temporal::LocalClock::today();
+}
 auto today_str() -> std::string { return date_str(today()); }
 
-auto tomorrow() -> Lines::Temporal::Date { return today() + Lines::Temporal::Days{1}; }
+auto tomorrow() -> Lines::Temporal::Date {
+    return today() + Lines::Temporal::Days{1};
+}
 auto tomorrow_str() -> std::string { return date_str(tomorrow()); }
 
 auto due_color(const Lines::Temporal::TimePoint &due) -> std::string {
@@ -141,5 +152,9 @@ auto due_color(const Lines::Temporal::TimePoint &due) -> std::string {
 
 auto due_str(const Lines::Temporal::TimePoint &due) -> std::string {
     return Colors::colorize(timepoint_str(due), due_color(due));
+}
+
+auto error_str(const std::string &prefix, std::string_view msg) -> std::string {
+    return std::format("{} {}", Colors::colorize(prefix, Colors::red), msg);
 }
 } // namespace Lines::ClientUtils
