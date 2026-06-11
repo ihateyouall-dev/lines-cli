@@ -1,6 +1,7 @@
 #include "cli/tasks/tasks.hpp"
 
 #include "CLI/CLI.hpp"
+#include "cli/tasks/filter.hpp"
 #include "client-utils/parsers.hpp"
 #include "client-utils/utils.hpp"
 #include "lines/tasks/task.hpp"
@@ -11,6 +12,7 @@
 #include <format>
 #include <optional>
 #include <ranges>
+#include <span>
 #include <stdexcept>
 #include <string>
 
@@ -39,6 +41,36 @@ void validate_regex(std::string_view regex) {
 auto backend_id(std::size_t id) -> std::size_t { return --id; }
 auto frontend_id(std::size_t id) -> std::size_t { return ++id; }
 void make_backend_id(std::size_t &id) { --id; }
+
+auto digits_in_number(std::size_t num) -> std::size_t {
+    std::size_t res = 1;
+    while (num >= 10) {
+        num /= 10;
+        ++res;
+    }
+
+    return res;
+}
+
+void print_list(const std::span<Lines::TasksFilter::TasksFilterResult> &list,
+                bool use_unicode, bool colorize) {
+    auto max_id =
+        std::ranges::max(list, {}, &Lines::TasksFilter::TasksFilterResult::id);
+    auto max_id_width = digits_in_number(max_id.id);
+
+    for (const auto &task : list) {
+        auto id_width = digits_in_number(frontend_id(task.id));
+        auto delta = max_id_width - id_width;
+
+        // Alignment for output
+        for (std::size_t i{}; i < delta; ++i) {
+            std::cout << ' ';
+        }
+
+        std::cout << std::format("{}. {}\n", frontend_id(task.id),
+                                 task_str(*task.task, use_unicode, colorize));
+    }
+}
 } // namespace
 
 Lines::CLI::TasksCmd::TasksCmd() { _storage.load_from_file(); }; // NOLINT
@@ -323,11 +355,7 @@ void Lines::CLI::TasksCmd::removecmd_callback() {
         std::cerr << error_str("ERROR:", "Task not found\n");
         return;
     }
-    for (const auto &task : tasks) {
-        std::cout << std::format(
-            "{}. {}\n", frontend_id(task.id),
-            task_str(*task.task, _cfg.cli_use_unicode, _cfg.cli_colorize));
-    }
+    print_list(tasks, _cfg.cli_use_unicode, _cfg.cli_colorize);
 
     if (!_options.force && !_cfg.always_force) {
         std::cout << std::format("\n{} tasks will be removed\n", tasks.size());
@@ -352,11 +380,8 @@ void Lines::CLI::TasksCmd::listcmd_callback() {
         std::cerr << "Seems like there's no tasks\n";
         return;
     }
-    for (const auto &task : tasks) {
-        std::cout << std::format(
-            "{}. {}\n", frontend_id(task.id),
-            task_str(*task.task, _cfg.cli_use_unicode, _cfg.cli_colorize));
-    }
+
+    print_list(tasks, _cfg.cli_colorize, _cfg.cli_use_unicode);
 }
 
 void Lines::CLI::TasksCmd::showcmd_callback() {
@@ -431,12 +456,7 @@ void Lines::CLI::TasksCmd::completioncmd_callback(
         }
     } else {
         std::cout << std::format("Tasks to {}\n", action_desc);
-        for (const auto &task : tasks) {
-            std::cout << std::format("{}. {}\n", frontend_id(task.id),
-                                     ClientUtils::task_str(*task.task,
-                                                           _cfg.cli_use_unicode,
-                                                           _cfg.cli_colorize));
-        }
+        print_list(tasks, _cfg.cli_use_unicode, _cfg.cli_colorize);
         if (_options.force || ClientUtils::confirm()) {
             for (const auto &task : tasks) {
                 fn(*task.task);
