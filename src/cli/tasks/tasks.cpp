@@ -2,10 +2,12 @@
 
 #include "CLI/CLI.hpp"
 #include "cli/tasks/filter.hpp"
+#include "client-utils/id.hpp"
 #include "client-utils/parsers.hpp"
 #include "client-utils/utils.hpp"
 #include "lines/tasks/task.hpp"
 #include "lines/temporal/clocks.hpp"
+#include "storages/tasks/json.hpp"
 
 #include <cstddef>
 #include <exception>
@@ -17,6 +19,9 @@
 #include <string>
 
 using namespace Lines::ClientUtils;
+
+// Type of task id that appears in output
+using CLITaskID = ID<std::size_t, 1>;
 
 namespace {
 // Executes function and throws CLI::ValidationError if exception was thrown
@@ -38,10 +43,6 @@ void validate_regex(std::string_view regex) {
     }
 }
 
-auto backend_id(std::size_t id) -> std::size_t { return --id; }
-auto frontend_id(std::size_t id) -> std::size_t { return ++id; }
-void make_backend_id(std::size_t &id) { --id; }
-
 auto digits_in_number(std::size_t num) -> std::size_t {
     std::size_t res = 1;
     while (num >= 10) {
@@ -52,14 +53,20 @@ auto digits_in_number(std::size_t num) -> std::size_t {
     return res;
 }
 
-void print_list(const std::span<Lines::TasksFilter::TasksFilterResult> &list,
+void print_list(std::span<Lines::TasksFilter::TasksFilterResult> list,
                 bool use_unicode, bool colorize) {
-    auto max_id =
-        std::ranges::max(list, {}, &Lines::TasksFilter::TasksFilterResult::id);
-    auto max_id_width = digits_in_number(max_id.id);
+    Lines::TasksJSONStorage::ID max_id;
+    for (const auto &task : list) {
+        if (task.id > max_id) {
+            max_id = task.id;
+        }
+    }
+    auto cli_max_id = Lines::ClientUtils::id_cast<CLITaskID>(max_id);
+    auto max_id_width = digits_in_number(std::size_t(cli_max_id));
 
     for (const auto &task : list) {
-        auto id_width = digits_in_number(frontend_id(task.id));
+        auto id = Lines::ClientUtils::id_cast<CLITaskID>(task.id);
+        auto id_width = digits_in_number(std::size_t(id));
         auto delta = max_id_width - id_width;
 
         // Alignment for output
@@ -67,7 +74,7 @@ void print_list(const std::span<Lines::TasksFilter::TasksFilterResult> &list,
             std::cout << ' ';
         }
 
-        std::cout << std::format("{}. {}\n", frontend_id(task.id),
+        std::cout << std::format("{}. {}\n", std::size_t(id),
                                  task_str(*task.task, use_unicode, colorize));
     }
 }
@@ -277,19 +284,21 @@ void Lines::CLI::TasksCmd::addcmd_callback() {
         }
     });
 
+    std::cout << "Added task:\n";
     const std::size_t id = _storage.size();
+    std::cout << std::format("ID: {}\n", id + 1);
     std::cout << std::format(
-        "Added task:\nID: {}\n{}\n", frontend_id(id),
-        full_task_str(task, _cfg.cli_use_unicode, _cfg.cli_colorize));
+        "{}\n", full_task_str(task, _cfg.cli_use_unicode, _cfg.cli_colorize));
     _storage.add(task);
     _dirty = true;
 }
 
 void Lines::CLI::TasksCmd::setcmd_callback() {
     Lines::Task *task = nullptr;
+    auto id = CLITaskID(*_options.tasks_filter_rule.id);
 
     try {
-        task = &_storage.at(backend_id(*_options.tasks_filter_rule.id));
+        task = &_storage.at(id_cast<TasksJSONStorage::ID>(id));
     } catch (const std::exception &e) {
         std::cerr << error_str("ERROR:", "Task not found\n");
         return;
@@ -347,8 +356,9 @@ void Lines::CLI::TasksCmd::setcmd_callback() {
 }
 
 void Lines::CLI::TasksCmd::removecmd_callback() {
+    TasksJSONStorage::ID id;
     if (_options.tasks_filter_rule.id) {
-        make_backend_id(*_options.tasks_filter_rule.id);
+        id = TasksJSONStorage::ID{*_options.tasks_filter_rule.id};
     }
     auto tasks = filter(_storage, _options.tasks_filter_rule);
     if (tasks.empty()) {
@@ -365,7 +375,7 @@ void Lines::CLI::TasksCmd::removecmd_callback() {
     }
 
     for (const auto &task : std::ranges::reverse_view(tasks)) {
-        _storage.erase(static_cast<std::ptrdiff_t>(task.id));
+        _storage.erase(task.id);
     }
     std::cout << std::format("\n{} tasks was removed\n", tasks.size());
     _dirty = true;
@@ -373,7 +383,9 @@ void Lines::CLI::TasksCmd::removecmd_callback() {
 
 void Lines::CLI::TasksCmd::listcmd_callback() {
     if (_options.tasks_filter_rule.id) {
-        make_backend_id(*_options.tasks_filter_rule.id);
+        // Indexing at CLI output begins at 1, but filter and storage expects
+        // that indexing will begin at 0
+        --*_options.tasks_filter_rule.id;
     }
     auto tasks = filter(_storage, _options.tasks_filter_rule);
     if (tasks.empty()) {
@@ -385,11 +397,11 @@ void Lines::CLI::TasksCmd::listcmd_callback() {
 }
 
 void Lines::CLI::TasksCmd::showcmd_callback() {
-    auto id = backend_id(*_options.tasks_filter_rule.id);
+    auto id = CLITaskID{*_options.tasks_filter_rule.id};
     try {
-        auto task = _storage.at(id);
+        auto task = _storage.at(id_cast<TasksJSONStorage::ID>(id));
         std::cout << std::format(
-            "ID: {}\n{}\n", frontend_id(id),
+            "ID: {}\n{}\n", std::size_t(id),
             full_task_str(task, _cfg.cli_use_unicode, _cfg.cli_colorize));
     } catch (const std::exception &e) {
         std::cerr << error_str("ERROR:", "Task not found\n");
@@ -448,7 +460,8 @@ void Lines::CLI::TasksCmd::completioncmd_callback(
         }
         fn(tmp);
         std::cout << std::format(
-            "Task to {}:\nID: {}\n{}\n", action_desc, frontend_id(task.id),
+            "Task to {}:\nID: {}\n{}\n", action_desc,
+            std::size_t(id_cast<CLITaskID>(task.id)),
             ClientUtils::full_task_str(tmp, _cfg.cli_use_unicode,
                                        _cfg.cli_colorize));
         if (_options.force || ClientUtils::confirm()) {

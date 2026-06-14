@@ -3,17 +3,20 @@
 #include "storages/tasks/json.hpp"
 
 #include <algorithm>
+#include <cstddef>
 
-auto Lines::TasksFilter::has_tag(const Task &task, const std::string &tag) -> bool {
+auto Lines::TasksFilter::has_tag(const Task &task, const std::string &tag)
+    -> bool {
     return std::ranges::find(task.tags(), tag) != task.tags().end();
 }
 
-auto Lines::TasksFilter::filter(Lines::TasksJSONStorage &storage, const TasksFilterRule &rule)
+auto Lines::TasksFilter::filter(Lines::TasksJSONStorage &storage,
+                                const TasksFilterRule &rule)
     -> std::vector<TasksFilterResult> {
     std::vector<TasksFilterResult> result;
     if (rule.id) {
-        auto id = *rule.id;
-        if (id < storage.size()) {
+        auto id = TasksJSONStorage::ID(*rule.id);
+        if (std::size_t(id) < storage.size()) {
             result.emplace_back(id, &storage[id]);
         }
         return result;
@@ -21,31 +24,37 @@ auto Lines::TasksFilter::filter(Lines::TasksJSONStorage &storage, const TasksFil
 
     auto pred = [&rule](const Task &task) -> bool {
         bool contains_all_tags =
-            !rule.all_tags || std::ranges::all_of(*rule.all_tags, [&](const auto &tag) -> auto {
+            !rule.all_tags ||
+            std::ranges::all_of(*rule.all_tags, [&](const auto &tag) -> auto {
                 return has_tag(task, tag);
             });
         bool contains_any_tag =
-            !rule.any_tag || std::ranges::any_of(*rule.any_tag, [&](const auto &tag) -> auto {
+            !rule.any_tag ||
+            std::ranges::any_of(*rule.any_tag, [&](const auto &tag) -> auto {
                 return has_tag(task, tag);
             });
         bool satisfying_date = !rule.due || *task.due() == *rule.due;
         bool satisfying_active =
-            !rule.active_bool || task.is_active(*rule.active_due) == *rule.active_bool;
+            !rule.active_bool ||
+            task.is_active(*rule.active_due) == *rule.active_bool;
         bool matches_title_regex =
-            !rule.title_regex || re2::RE2::FullMatch(task.title(), *rule.title_regex);
+            !rule.title_regex ||
+            re2::RE2::FullMatch(task.title(), *rule.title_regex);
         bool matches_partial_title_regex =
             !rule.partial_title_regex ||
             re2::RE2::PartialMatch(task.title(), *rule.partial_title_regex);
 
-        return (contains_all_tags && contains_any_tag && satisfying_date && satisfying_active &&
-                matches_title_regex && matches_partial_title_regex) ||
+        return (contains_all_tags && contains_any_tag && satisfying_date &&
+                satisfying_active && matches_title_regex &&
+                matches_partial_title_regex) ||
                rule.all;
     };
 
     for (std::size_t i{}; i < storage.size(); ++i) {
-        auto *task = &storage[i];
+        auto id = TasksJSONStorage::ID{i};
+        auto *task = &storage[id];
         if (pred(*task)) {
-            result.emplace_back(i, task);
+            result.emplace_back(id, task);
         }
     }
     return result;

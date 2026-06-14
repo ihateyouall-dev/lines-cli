@@ -18,6 +18,47 @@ class ID {
     constexpr explicit ID(Rep rep) : _rep(rep) {}
 
     constexpr explicit operator Rep() const noexcept { return _rep; }
+
+    constexpr auto operator+(const ID &rhs) const noexcept -> ID {
+        return ID(_rep + rhs._rep);
+    }
+    constexpr auto operator-(const ID &rhs) const noexcept -> ID {
+        return ID(_rep - rhs._rep);
+    }
+    constexpr auto operator*(const ID &rhs) const noexcept -> ID {
+        return ID(_rep * rhs._rep);
+    }
+    constexpr auto operator/(const ID &rhs) const noexcept -> ID {
+        return ID(_rep / rhs._rep);
+    }
+    constexpr auto operator%(const ID &rhs) const noexcept -> ID {
+        return ID(_rep % rhs._rep);
+    }
+
+    constexpr auto operator+=(const ID &rhs) noexcept -> ID & {
+        _rep += rhs._rep;
+        return *this;
+    }
+    constexpr auto operator-=(const ID &rhs) noexcept -> ID & {
+        _rep -= rhs._rep;
+        return *this;
+    }
+    constexpr auto operator*=(const ID &rhs) noexcept -> ID & {
+        _rep *= rhs._rep;
+        return *this;
+    }
+    constexpr auto operator/=(const ID &rhs) noexcept -> ID & {
+        _rep /= rhs._rep;
+        return *this;
+    }
+    constexpr auto operator%=(const ID &rhs) noexcept -> ID & {
+        _rep %= rhs._rep;
+        return *this;
+    }
+
+    friend constexpr auto operator<=>(const ID &lhs, const ID &rhs) {
+        return lhs._rep <=> rhs._rep;
+    }
 };
 
 template <typename> struct is_id : std::false_type {};
@@ -30,7 +71,7 @@ template <typename Tp> static constexpr bool is_id_v = is_id<Tp>::value;
 template <typename To, typename From,
           typename = std::enable_if_t<is_id_v<From> && is_id_v<To>>> // NOLINT
 constexpr auto id_cast(From from) -> To {
-    return From::value_type(from) + (To::primary - From::primary);
+    return To{typename From::value_type(from) + (To::primary - From::primary)};
 }
 } // namespace Lines::ClientUtils
 

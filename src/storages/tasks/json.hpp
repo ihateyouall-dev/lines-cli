@@ -1,5 +1,6 @@
 #pragma once
 
+#include "client-utils/id.hpp"
 #include "lines/tasks/task.hpp"
 #include "nlohmann/json_fwd.hpp"
 
@@ -20,7 +21,12 @@ class TasksJSONStorage {
     using iterator = decltype(_tasks)::iterator;
     using const_iterator = decltype(_tasks)::const_iterator;
 
-    TasksJSONStorage(std::filesystem::path file) : _file(std::move(file)) {} // NOLINT
+    using size_type = decltype(_tasks)::size_type;
+
+    using ID = ClientUtils::ID<size_type, 0>;
+
+    explicit TasksJSONStorage(std::filesystem::path file)
+        : _file(std::move(file)) {}
     void load_from_json(const nlohmann::json &json);
     void load_from_file();
 
@@ -30,15 +36,15 @@ class TasksJSONStorage {
 
     void save_to_file() const;
 
-    auto operator[](std::size_t index) -> Task &;
-    auto operator[](std::size_t index) const -> const Task &;
+    auto operator[](const ID &index) -> Task &;
+    auto operator[](const ID &index) const -> const Task &;
 
-    auto at(std::size_t index) -> Task &;
-    [[nodiscard]] auto at(std::size_t index) const -> const Task &;
+    auto at(const ID &index) -> Task &;
+    [[nodiscard]] auto at(const ID &index) const -> const Task &;
 
     auto add(const Task &task) -> Task &;
 
-    void erase(std::ptrdiff_t index);
+    void erase(const ID &index);
     void erase(iterator it);
 
     auto begin() -> iterator;
@@ -49,7 +55,7 @@ class TasksJSONStorage {
     [[nodiscard]] auto cbegin() const -> const_iterator;
     [[nodiscard]] auto cend() const -> const_iterator;
 
-    auto size() -> std::size_t;
+    auto size() -> size_type;
 
     auto empty() -> bool;
 };

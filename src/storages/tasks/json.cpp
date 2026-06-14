@@ -30,18 +30,21 @@ auto Lines::TasksJSON::to_json(const Lines::Task &task) -> nlohmann::json {
         auto rr = *task.repeat_rule();
         static constexpr int EVERY_UNIT_T = 0;
         static constexpr int EVERY_WEEKDAY_T = 1;
-        if (std::holds_alternative<Lines::TaskRepeat::EveryUnit>(rr.repeat_type)) {
+        if (std::holds_alternative<Lines::TaskRepeat::EveryUnit>(
+                rr.repeat_type)) {
             auto rtype = std::get<Lines::TaskRepeat::EveryUnit>(rr.repeat_type);
             result["repeat"]["type"] = EVERY_UNIT_T;
             result["repeat"]["interval"] = rtype.interval.count();
             result["repeat"]["unit"] = rtype.unit_str;
         } else {
-            auto rtype = std::get<Lines::TaskRepeat::EveryWeekday>(rr.repeat_type);
+            auto rtype =
+                std::get<Lines::TaskRepeat::EveryWeekday>(rr.repeat_type);
             result["repeat"]["type"] = EVERY_WEEKDAY_T;
             result["repeat"]["weekdays"] = rtype.weekdays;
         }
         if (rr.end) {
-            result["repeat"]["end"] = Lines::ClientUtils::timepoint_str_s(*rr.end);
+            result["repeat"]["end"] =
+                Lines::ClientUtils::timepoint_str_s(*rr.end);
         }
     } else {
         result["completed"] = task.completed();
@@ -69,8 +72,8 @@ auto Lines::TasksJSON::from_json(const nlohmann::json &json) -> Lines::Task {
     Lines::Task task(info);
 
     if (json.contains("due")) {
-        task.set_due(
-            Lines::ClientUtils::Parsers::parse_timepoint_nv(json["due"].get<std::string>()));
+        task.set_due(Lines::ClientUtils::Parsers::parse_timepoint_nv(
+            json["due"].get<std::string>()));
     }
 
     if (json.contains("repeat")) {
@@ -78,26 +81,31 @@ auto Lines::TasksJSON::from_json(const nlohmann::json &json) -> Lines::Task {
         int type = json["repeat"]["type"].get<int>();
         if (type == 0) {
             if (!json["repeat"].contains("interval")) {
-                throw std::runtime_error("Lines::TasksJSON::from_json: given json contains repeat "
-                                         "rule which must contain interval, but hasn't it");
+                throw std::runtime_error(
+                    "Lines::TasksJSON::from_json: given json contains repeat "
+                    "rule which must contain interval, but hasn't it");
             }
-            Lines::Temporal::Seconds interval{json["repeat"]["interval"].get<uint32_t>()};
+            Lines::Temporal::Seconds interval{
+                json["repeat"]["interval"].get<uint32_t>()};
             auto unit_str = json["repeat"].value("unit", "s");
-            rr.repeat_type =
-                Lines::TaskRepeat::EveryUnit{.interval = interval, .unit_str = unit_str};
+            rr.repeat_type = Lines::TaskRepeat::EveryUnit{.interval = interval,
+                                                          .unit_str = unit_str};
         } else if (type == 1) {
             if (!json["repeat"].contains("weekdays")) {
-                throw std::runtime_error("Lines::TasksJSON::from_json: given json contains repeat "
-                                         "rule which must contain weekdays, but hasn't it");
+                throw std::runtime_error(
+                    "Lines::TasksJSON::from_json: given json contains repeat "
+                    "rule which must contain weekdays, but hasn't it");
             }
-            auto weekdays = json["repeat"]["weekdays"].get<std::vector<Lines::Temporal::Weekday>>();
+            auto weekdays = json["repeat"]["weekdays"]
+                                .get<std::vector<Lines::Temporal::Weekday>>();
             rr.repeat_type = Lines::TaskRepeat::EveryWeekday{weekdays};
         } else {
-            throw std::runtime_error("Lines::TasksJSON::from_json: unknown repeat type");
+            throw std::runtime_error(
+                "Lines::TasksJSON::from_json: unknown repeat type");
         }
         if (json["repeat"].contains("end")) {
-            rr.end =
-                ClientUtils::Parsers::parse_timepoint_nv(json["repeat"]["end"].get<std::string>());
+            rr.end = ClientUtils::Parsers::parse_timepoint_nv(
+                json["repeat"]["end"].get<std::string>());
         }
         task.set_repeat_rule_raw(rr);
     }
@@ -129,7 +137,9 @@ void Lines::TasksJSONStorage::load_from_file() {
     load_from_json(json);
 }
 
-auto Lines::TasksJSONStorage::tasks() const -> const std::vector<Task> & { return _tasks; }
+auto Lines::TasksJSONStorage::tasks() const -> const std::vector<Task> & {
+    return _tasks;
+}
 
 auto Lines::TasksJSONStorage::to_json() const -> nlohmann::json {
     nlohmann::json res;
@@ -144,32 +154,38 @@ void Lines::TasksJSONStorage::save_to_file() const {
     std::ofstream fs(_file);
 
     if (!fs) {
-        throw std::runtime_error("Lines::TasksJSONStorage::save_to_file: cannot open file: " +
-                                 _file.string());
+        throw std::runtime_error(
+            "Lines::TasksJSONStorage::save_to_file: cannot open file: " +
+            _file.string());
     }
 
     fs << to_json().dump(4);
 }
 
-auto Lines::TasksJSONStorage::operator[](std::size_t index) -> Lines::Task & {
-    return _tasks[index];
+auto Lines::TasksJSONStorage::operator[](const ID &index) -> Lines::Task & {
+    return _tasks[size_type(index)];
 }
 
-auto Lines::TasksJSONStorage::operator[](std::size_t index) const -> const Lines::Task & {
-    return _tasks[index];
+auto Lines::TasksJSONStorage::operator[](const ID &index) const
+    -> const Lines::Task & {
+    return _tasks[size_type(index)];
 }
 
-auto Lines::TasksJSONStorage::at(std::size_t index) -> Lines::Task & { return _tasks.at(index); }
-
-auto Lines::TasksJSONStorage::at(std::size_t index) const -> const Lines::Task & {
-    return _tasks.at(index);
+auto Lines::TasksJSONStorage::at(const ID &index) -> Lines::Task & {
+    return _tasks.at(size_type(index));
 }
 
-void Lines::TasksJSONStorage::erase(std::ptrdiff_t index) {
-    if (static_cast<std::size_t>(index) >= size() || index < 0) {
-        throw std::out_of_range("Lines::TasksJSONStorage::erase: index out of range");
+auto Lines::TasksJSONStorage::at(const ID &index) const -> const Lines::Task & {
+    return _tasks.at(size_type(index));
+}
+
+void Lines::TasksJSONStorage::erase(const ID &index) {
+    auto idx = size_type(index);
+    if (idx >= size() || idx < 0) {
+        throw std::out_of_range(
+            "Lines::TasksJSONStorage::erase: index out of range");
     }
-    _tasks.erase(_tasks.begin() + index);
+    _tasks.erase(_tasks.begin() + static_cast<std::ptrdiff_t>(idx));
 }
 
 void Lines::TasksJSONStorage::erase(iterator it) { _tasks.erase(it); }
@@ -177,14 +193,22 @@ void Lines::TasksJSONStorage::erase(iterator it) { _tasks.erase(it); }
 auto Lines::TasksJSONStorage::begin() -> iterator { return _tasks.begin(); }
 auto Lines::TasksJSONStorage::end() -> iterator { return _tasks.end(); }
 
-auto Lines::TasksJSONStorage::begin() const -> const_iterator { return _tasks.begin(); }
-auto Lines::TasksJSONStorage::end() const -> const_iterator { return _tasks.end(); }
+auto Lines::TasksJSONStorage::begin() const -> const_iterator {
+    return _tasks.begin();
+}
+auto Lines::TasksJSONStorage::end() const -> const_iterator {
+    return _tasks.end();
+}
 
-auto Lines::TasksJSONStorage::size() -> std::size_t { return _tasks.size(); }
+auto Lines::TasksJSONStorage::size() -> size_type { return _tasks.size(); }
 auto Lines::TasksJSONStorage::empty() -> bool { return _tasks.empty(); }
 
-auto Lines::TasksJSONStorage::cbegin() const -> const_iterator { return _tasks.cbegin(); }
-auto Lines::TasksJSONStorage::cend() const -> const_iterator { return _tasks.cend(); }
+auto Lines::TasksJSONStorage::cbegin() const -> const_iterator {
+    return _tasks.cbegin();
+}
+auto Lines::TasksJSONStorage::cend() const -> const_iterator {
+    return _tasks.cend();
+}
 auto Lines::TasksJSONStorage::add(const Lines::Task &task) -> Task & {
     return _tasks.emplace_back(task);
 }
